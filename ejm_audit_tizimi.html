@@ -1,0 +1,3355 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EJM | Audit Tizimi — Biznes Diagnostika Platformasi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef4ff',
+              100: '#d9e6ff',
+              200: '#bcd4ff',
+              500: '#2563eb',
+              600: '#1d4ed8',
+              700: '#1e40af',
+              900: '#172554',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    /* Custom subtle scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .answer-btn {
+      transition: all 0.15s ease;
+    }
+    .answer-btn:active {
+      transform: scale(0.96);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-brand-100 selection:text-brand-900">
+
+  <!-- Login oynasi (parol Apps Script tomonida tekshiriladi) -->
+  <div id="loginOverlay" class="hidden fixed inset-0 z-[60] items-center justify-center bg-slate-100 p-4">
+    <form onsubmit="submitLogin(event)" class="bg-white rounded-2xl w-full max-w-sm shadow-2xl border border-slate-200 p-6 space-y-4">
+      <div>
+        <h2 class="text-xl font-extrabold text-slate-900">EJM | Audit</h2>
+        <p class="text-xs text-slate-500">Davom etish uchun tizimga kiring</p>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Login</label>
+        <input type="text" id="loginInput" required autocomplete="username"
+               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Parol</label>
+        <input type="password" id="passwordInput" required autocomplete="current-password"
+               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+      </div>
+      <p id="loginError" class="hidden text-xs font-semibold text-rose-600"></p>
+      <button type="submit" id="loginSubmitBtn"
+              class="w-full px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-sm transition">Kirish</button>
+    </form>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+  <!-- Top Navigation Header -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+      <!-- Brand / Back to Dashboard -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="goHome()">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-600 to-indigo-700 flex items-center justify-center text-white font-extrabold text-lg shadow-sm">
+          EJM
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-slate-900 text-base sm:text-lg tracking-tight">EJM | Audit</span>
+            <span id="connectionBadge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              Demo rejim
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 hidden sm:block">Employee Journey Map — Biznes Diagnostika Tizimi</p>
+        </div>
+      </div>
+
+      <!-- Header Right Actions -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <a href="https://docs.google.com/spreadsheets/d/1uHzu4aAAMdun3Ia4kjwrtHe4EnZHivk56rE4RVbJA7o/edit" target="_blank" rel="noopener noreferrer"
+           class="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition">
+          <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Asosiy Shablon
+        </a>
+
+        <button onclick="logout()" title="Tizimdan chiqish"
+                class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
+          <span>Chiqish</span>
+        </button>
+
+        <button onclick="openNewCompanyModal()"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 shadow-sm transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+          </svg>
+          <span>Kompaniya qo'shish</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+    <!-- ==================== VIEW 1: DASHBOARD (COMPANIES LIST) ==================== -->
+    <section id="dashboardView" class="space-y-6">
+      <!-- Hero Action Banner -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+        <div class="space-y-2 max-w-2xl">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-semibold">
+            <span>6 Bosqich</span>
+            <span>•</span>
+            <span>36 Blok</span>
+            <span>•</span>
+            <span>Avtomatik Google Sheets Shablon</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Bizneslar uchun EJM Diagnostika Boshqaruvi
+          </h1>
+          <p class="text-sm sm:text-base text-slate-600 leading-relaxed">
+            Har bir yangi biznes qo‘shilganda asosiy shablondan alohida Google Sheets nusxasi yaratiladi. Diagnostika natijalari to‘g‘ridan-to‘g‘ri jadvalga yoziladi va yakunda biznes egasiga tayyor havola taqdim etiladi.
+          </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+          <button onclick="openNewCompanyModal()"
+                  class="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm sm:text-base font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-md shadow-brand-600/20 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+            </svg>
+            Kompaniya qo'shish
+          </button>
+        </div>
+      </div>
+
+      <!-- Companies Grid Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">Diagnostika qilinayotgan kompaniyalar</h2>
+          <p class="text-xs text-slate-500">Barcha kiritilgan bizneslar va ularning shaxsiy Google Sheets hujjatlari</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="text" id="companySearchInput" oninput="renderCompaniesList()" placeholder="Kompaniya yoki soha bo'yicha qidirish..."
+                 class="w-full sm:w-64 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+        </div>
+      </div>
+
+      <!-- Companies List Container -->
+      <div id="companiesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Populated dynamically via JS -->
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 2: AUDIT WORKSPACE ==================== -->
+    <section id="workspaceView" class="hidden space-y-6">
+      <!-- Top Breadcrumb & Company Action Bar -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-5">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div class="flex items-start sm:items-center gap-3">
+            <button onclick="goHome()" class="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition shrink-0" title="Orqaga">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </button>
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <h1 id="wsCompanyName" class="text-xl sm:text-2xl font-extrabold text-slate-900">Kompaniya nomi</h1>
+                <span id="wsCompanySector" class="px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700">Soha</span>
+                <span id="wsStatusBadge" class="px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700">Jarayonda</span>
+              </div>
+              <p id="wsCompanyMeta" class="text-xs sm:text-sm text-slate-500 mt-1">
+                Auditor: — • Sana: —
+              </p>
+            </div>
+          </div>
+
+          <!-- Workspace Action Buttons -->
+          <div class="flex flex-wrap items-center gap-2.5">
+            <a id="wsSheetDirectLink" href="#" target="_blank" rel="noopener noreferrer"
+               class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              <span>Google Sheetsni ochish</span>
+            </a>
+
+            <button onclick="syncAuditToSheets(false)" id="syncNowBtn"
+                    class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
+              <svg class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Sheetsga saqlash</span>
+            </button>
+
+            <button onclick="finishDiagnosis()"
+                    class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-sm transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Diagnostikani yakunlash</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Natija KPI Strip -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div class="text-xs font-medium text-slate-500">Umumiy EJM Darajasi</div>
+            <div class="mt-1 flex items-baseline gap-2">
+              <span id="kpiOverallScore" class="text-2xl font-extrabold text-brand-600">0%</span>
+              <span id="kpiOverallLabel" class="text-xs font-medium text-slate-500">Boshlang'ich</span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-200 rounded-full mt-2 overflow-hidden">
+              <div id="kpiOverallBar" class="h-full bg-brand-600 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div class="text-xs font-medium text-slate-500">To'ldirilganlik holati</div>
+            <div class="mt-1 flex items-baseline gap-2">
+              <span id="kpiCompletionPct" class="text-2xl font-extrabold text-slate-900">0%</span>
+              <span id="kpiAnsweredCount" class="text-xs font-medium text-slate-500">0 / 0 savol</span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-200 rounded-full mt-2 overflow-hidden">
+              <div id="kpiCompletionBar" class="h-full bg-emerald-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div class="text-xs font-medium text-slate-500">Javoblar taqsimoti</div>
+            <div class="mt-1.5 flex items-center gap-2 text-xs font-bold">
+              <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">HA: <span id="kpiCountHa">0</span></span>
+              <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800">QISMAN: <span id="kpiCountQisman">0</span></span>
+              <span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800">YO'Q: <span id="kpiCountYoq">0</span></span>
+            </div>
+            <div class="text-[11px] text-slate-400 mt-2">HA = 1 ball • QISMAN = 0.5 • YO'Q = 0</div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div class="text-xs font-medium text-slate-500">Joriy bo'lim natijasi</div>
+            <div class="mt-1 flex items-baseline gap-2">
+              <span id="kpiStageScore" class="text-2xl font-extrabold text-indigo-600">0%</span>
+              <span id="kpiStageName" class="text-xs font-medium text-slate-600 truncate">1. Hiring</span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-200 rounded-full mt-2 overflow-hidden">
+              <div id="kpiStageBar" class="h-full bg-indigo-600 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6 Stage Navigation Tabs -->
+      <div class="flex overflow-x-auto gap-2 pb-1 no-scrollbar" id="stageTabsContainer">
+        <!-- Populated dynamically -->
+      </div>
+
+      <!-- Filter & Quick Tools Bar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-semibold text-slate-500 mr-1">Filtr:</span>
+          <button onclick="setQuestionFilter('ALL')" data-filter="ALL" class="q-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white">Barchasi</button>
+          <button onclick="setQuestionFilter('UNANSWERED')" data-filter="UNANSWERED" class="q-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">Javob berilmagan</button>
+          <button onclick="setQuestionFilter('GAPS')" data-filter="GAPS" class="q-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">Muammoli (Yo'q / Qisman)</button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input type="text" id="questionSearchInput" oninput="renderQuestionsArea()" placeholder="Savol ichidan qidirish..."
+                 class="w-full sm:w-64 px-3 py-1.5 rounded-xl border border-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+        </div>
+      </div>
+
+      <!-- Blocks & Questions Container -->
+      <div id="blocksContainer" class="space-y-5">
+        <!-- Populated dynamically -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL 1: KOMPANIYA QO'SHISH ==================== -->
+  <div id="newCompanyModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden my-auto">
+      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <h3 class="text-lg font-extrabold text-slate-900">Yangi kompaniya qo'shish</h3>
+          <p class="text-xs text-slate-500">Butun kompaniya auditi uchun shaxsiy EJM Google Sheets nusxasi yaratiladi</p>
+        </div>
+        <button onclick="closeNewCompanyModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <form id="newCompanyForm" onsubmit="handleCreateCompany(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Kompaniya nomi *</label>
+          <input type="text" id="inpCompanyName" required placeholder="Masalan: Najot Ta'lim / Texnomart"
+                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Faoliyat sohasi *</label>
+            <select id="inpCompanySector" required
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <option value="Ta'lim va O'quv markaz">Ta'lim va O'quv markaz</option>
+              <option value="Savdo va E-commerce">Savdo va E-commerce</option>
+              <option value="IT va Texnologiya">IT va Texnologiya</option>
+              <option value="Ishlab chiqarish">Ishlab chiqarish</option>
+              <option value="Xizmat ko'rsatish">Xizmat ko'rsatish</option>
+              <option value="Tibbiyot va Farmatsevtika">Tibbiyot va Farmatsevtika</option>
+              <option value="Qurilish va Ko'chmas mulk">Qurilish va Ko'chmas mulk</option>
+              <option value="Boshqa soha">Boshqa soha</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Xodimlar soni</label>
+            <select id="inpEmployeeCount"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <option value="1-15 nafar">1–15 nafar</option>
+              <option value="16-50 nafar" selected>16–50 nafar</option>
+              <option value="51-150 nafar">51–150 nafar</option>
+              <option value="150+ nafar">150+ nafar</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Auditor ismi *</label>
+            <input type="text" id="inpAuditorName" required value="Nurali"
+                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Audit sanasi *</label>
+            <input type="date" id="inpAuditDate" required
+                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Biznes egasi / Aloqa</label>
+          <input type="text" id="inpOwnerContact" placeholder="@username yoki +998..."
+                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Qo'shimcha ma'lumot / Maqsad</label>
+          <textarea id="inpNotes" rows="2" placeholder="Diagnostika bo'yicha qisqacha izoh..."
+                    class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
+          <button type="button" onclick="closeNewCompanyModal()"
+                  class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">
+            Bekor qilish
+          </button>
+          <button type="submit" id="createCompanySubmitBtn"
+                  class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-sm transition">
+            <span>Shablon yaratish va Boshlash</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 2: DIAGNOSTIKA YAKUNI & HAVOLA ==================== -->
+  <div id="completionModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden my-auto">
+      <div class="px-6 py-5 bg-gradient-to-r from-brand-600 to-indigo-700 text-white flex items-center justify-between">
+        <div>
+          <span class="inline-block px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-semibold mb-1">Diagnostika yakunlandi</span>
+          <h3 id="compModalTitle" class="text-xl font-extrabold">Kompaniya — EJM Natijalar</h3>
+        </div>
+        <button onclick="closeCompletionModal()" class="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-5">
+        <!-- Overall Score Summary Card -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+          <div>
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Umumiy EJM Tizim Darajasi</div>
+            <div class="flex items-baseline gap-2.5 mt-1">
+              <span id="compOverallPct" class="text-3xl font-extrabold text-brand-600">0%</span>
+              <span id="compOverallStatus" class="text-sm font-semibold text-slate-700">Boshlang'ich bosqich</span>
+            </div>
+            <p id="compMetaSummary" class="text-xs text-slate-500 mt-1">To'ldirilganlik: 0%</p>
+          </div>
+          <div class="text-right">
+            <span id="compSyncStatusBadge" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              ✓ Google Sheets yangilangan
+            </span>
+          </div>
+        </div>
+
+        <!-- Stage Breakdown Table -->
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">6 ta bosqich bo'yicha ko'rsatkichlar (Natija varag'i)</h4>
+          <div class="border border-slate-200 rounded-xl overflow-hidden">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead class="bg-slate-50 text-xs font-bold text-slate-600 border-b border-slate-200">
+                <tr>
+                  <th class="py-2.5 px-3.5">Bosqich nomi</th>
+                  <th class="py-2.5 px-3.5 text-center">To'ldirilgan</th>
+                  <th class="py-2.5 px-3.5 text-right">Natija %</th>
+                </tr>
+              </thead>
+              <tbody id="compStagesTableBody" class="divide-y divide-slate-100 text-xs sm:text-sm">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Business Owner Share Link Box -->
+        <div class="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-900">Biznes egasiga yuborish uchun Google Sheets havolasi</span>
+            <a id="compOpenSheetBtn" href="#" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-emerald-700 hover:underline">
+              Jadvalni ochish →
+            </a>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input type="text" id="compSheetUrlInput" readonly
+                   class="flex-1 px-3.5 py-2.5 rounded-xl bg-white border border-emerald-300 text-xs sm:text-sm font-medium text-slate-800 focus:outline-none" />
+            <button onclick="copySheetLink()"
+                    class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 transition">
+              Havolani nusxalash
+            </button>
+          </div>
+
+          <div class="pt-1 flex flex-col sm:flex-row gap-2">
+            <button onclick="copyTelegramReport()"
+                    class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              </svg>
+              Telegram / WhatsApp uchun tayyor hisobot matnini nusxalash
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT APPLICATION LOGIC ==================== -->
+  <script>
+    // 1. EJM | AUDIT TEMPLATE STRUCTURE (haqiqiy "EJM _ Audit" jadvalidan: 6 bosqich, 36 blok, 341 savol)
+    const TEMPLATE_SPREADSHEET_ID = '1uHzu4aAAMdun3Ia4kjwrtHe4EnZHivk56rE4RVbJA7o';
+    const TEMPLATE_SPREADSHEET_URL = `https://docs.google.com/spreadsheets/d/${TEMPLATE_SPREADSHEET_ID}/edit`;
+
+    const EJM_TEMPLATE = [
+      {
+        "id": "stage_1",
+        "sheetName": "1. Hiring",
+        "shortName": "1. Hiring",
+        "title": "1. Hiring — NOMZOD JALB QILISH VA SARALASH",
+        "blocks": [
+          {
+            "code": "1.1",
+            "title": "1.1 Vakansiya tizimi",
+            "questions": [
+              {
+                "code": "1-1",
+                "tr": 1,
+                "text": "Har bir lavozim uchun alohida vakansiya profili mavjudmi?"
+              },
+              {
+                "code": "1-2",
+                "tr": 2,
+                "text": "Vakansiyada kompaniyaning afzalliklari ko‘rsatilganmi?"
+              },
+              {
+                "code": "1-3",
+                "tr": 3,
+                "text": "Kompaniya haqida qisqacha ma’lumot berilganmi?"
+              },
+              {
+                "code": "1-4",
+                "tr": 4,
+                "text": "Bo‘lim haqida ma’lumot berilganmi?"
+              },
+              {
+                "code": "1-5",
+                "tr": 5,
+                "text": "Lavozimning asosiy vazifalari aniq yozilganmi?"
+              },
+              {
+                "code": "1-6",
+                "tr": 6,
+                "text": "Xodimdan kutiladigan natijalar yozilganmi?"
+              },
+              {
+                "code": "1-7",
+                "tr": 7,
+                "text": "Ish vaqti ko‘rsatilganmi?"
+              },
+              {
+                "code": "1-8",
+                "tr": 8,
+                "text": "Ish joyi/manzili ko‘rsatilganmi?"
+              },
+              {
+                "code": "1-9",
+                "tr": 9,
+                "text": "Ish formati ko‘rsatilganmi?"
+              },
+              {
+                "code": "1-10",
+                "tr": 10,
+                "text": "Maosh yoki maosh diapazoni ko‘rsatilganmi?"
+              },
+              {
+                "code": "1-11",
+                "tr": 11,
+                "text": "Sinov muddati ko‘rsatilganmi?"
+              },
+              {
+                "code": "1-12",
+                "tr": 12,
+                "text": "Kimga bo‘ysunishi ko‘rsatilganmi?"
+              },
+              {
+                "code": "1-13",
+                "tr": 13,
+                "text": "O‘sish imkoniyati ko‘rsatilganmi?"
+              },
+              {
+                "code": "1-14",
+                "tr": 14,
+                "text": "Kerakli tajriba ko‘rsatilganmi?"
+              },
+              {
+                "code": "1-15",
+                "tr": 15,
+                "text": "Kerakli bilim va ko‘nikmalar yozilganmi?"
+              },
+              {
+                "code": "1-16",
+                "tr": 16,
+                "text": "Kerakli shaxsiy kompetensiyalar belgilanganmi?"
+              },
+              {
+                "code": "1-17",
+                "tr": 17,
+                "text": "Kompaniya beradigan sharoitlar yozilganmi?"
+              },
+              {
+                "code": "1-18",
+                "tr": 18,
+                "text": "Ishni bajarish uchun beriladigan resurslar ko‘rsatilganmi?"
+              },
+              {
+                "code": "1-19",
+                "tr": 19,
+                "text": "Tanlov bosqichlari ko‘rsatilganmi?"
+              },
+              {
+                "code": "1-20",
+                "tr": 20,
+                "text": "Murojaat qilish tartibi aniqmi?"
+              },
+              {
+                "code": "1-21",
+                "tr": 21,
+                "text": "Vakansiya matni imlo va uslub jihatdan tekshirilganmi?"
+              },
+              {
+                "code": "1-22",
+                "tr": 22,
+                "text": "Vakansiyalar uchun yagona dizayn/shablon mavjudmi?"
+              }
+            ]
+          },
+          {
+            "code": "1.2",
+            "title": "1.2 Nomzod jalb qilish kanallari",
+            "questions": [
+              {
+                "code": "1-23",
+                "tr": 23,
+                "text": "Telegram orqali nomzod jalb qilinadimi?"
+              },
+              {
+                "code": "1-24",
+                "tr": 24,
+                "text": "Instagram orqali nomzod jalb qilinadimi?"
+              },
+              {
+                "code": "1-25",
+                "tr": 25,
+                "text": "Ish qidirish saytlaridan foydalaniladimi?"
+              },
+              {
+                "code": "1-26",
+                "tr": 26,
+                "text": "Xodimlar tavsiyasi orqali nomzod olinadimi?"
+              },
+              {
+                "code": "1-27",
+                "tr": 27,
+                "text": "Eski nomzodlar bazasidan foydalaniladimi?"
+              },
+              {
+                "code": "1-28",
+                "tr": 28,
+                "text": "Professional hamjamiyatlardan foydalaniladimi?"
+              },
+              {
+                "code": "1-29",
+                "tr": 29,
+                "text": "Har bir kanal bo‘yicha nomzod manbasi qayd qilinadimi?"
+              },
+              {
+                "code": "1-30",
+                "tr": 30,
+                "text": "Har bir kanal bo‘yicha kelgan nomzodlar soni hisoblanadimi?"
+              },
+              {
+                "code": "1-31",
+                "tr": 31,
+                "text": "Har bir kanal bo‘yicha suhbatga kelganlar hisoblanadimi?"
+              },
+              {
+                "code": "1-32",
+                "tr": 32,
+                "text": "Har bir kanal bo‘yicha ishga qabul qilinganlar hisoblanadimi?"
+              },
+              {
+                "code": "1-33",
+                "tr": 33,
+                "text": "Har bir kanalning conversion rate ko‘rsatkichi hisoblanadimi?"
+              },
+              {
+                "code": "1-34",
+                "tr": 34,
+                "text": "Nomzod jalb qilish xarajati hisoblanadimi?"
+              },
+              {
+                "code": "1-35",
+                "tr": 35,
+                "text": "Eng samarali kanal aniqlanadimi?"
+              }
+            ]
+          },
+          {
+            "code": "1.3",
+            "title": "1.3 Recruitment KPI",
+            "questions": [
+              {
+                "code": "1-36",
+                "tr": 36,
+                "text": "Time to Hire o‘lchanadimi?"
+              },
+              {
+                "code": "1-37",
+                "tr": 37,
+                "text": "Time to Fill o‘lchanadimi?"
+              },
+              {
+                "code": "1-38",
+                "tr": 38,
+                "text": "Cost per Hire hisoblanadimi?"
+              },
+              {
+                "code": "1-39",
+                "tr": 39,
+                "text": "Har bir vakansiyaning yopilish muddati kuzatiladimi?"
+              },
+              {
+                "code": "1-40",
+                "tr": 40,
+                "text": "Qaysi lavozimlarni to‘ldirish qiyinligi tahlil qilinadimi?"
+              },
+              {
+                "code": "1-41",
+                "tr": 41,
+                "text": "Oylik recruitment hisoboti mavjudmi?"
+              },
+              {
+                "code": "1-42",
+                "tr": 42,
+                "text": "Recruitment uchun mas’ul shaxs aniqmi?"
+              },
+              {
+                "code": "1-43",
+                "tr": 43,
+                "text": "Yillik recruitment rejasi mavjudmi?"
+              },
+              {
+                "code": "1-44",
+                "tr": 44,
+                "text": "Nomzodlar alohida bazada yuritiladimi?"
+              },
+              {
+                "code": "1-45",
+                "tr": 45,
+                "text": "Talent pool shakllantirilganmi?"
+              }
+            ]
+          },
+          {
+            "code": "1.4",
+            "title": "1.4 Dastlabki screening",
+            "questions": [
+              {
+                "code": "1-46",
+                "tr": 46,
+                "text": "Nomzod bilan birinchi aloqa qilish standarti mavjudmi?"
+              },
+              {
+                "code": "1-47",
+                "tr": 47,
+                "text": "Birinchi qo‘ng‘iroq uchun skript mavjudmi?"
+              },
+              {
+                "code": "1-48",
+                "tr": 48,
+                "text": "Screening savollari lavozimga moslashtirilganmi?"
+              },
+              {
+                "code": "1-49",
+                "tr": 49,
+                "text": "Nomzodning ish tajribasi tekshiriladimi?"
+              },
+              {
+                "code": "1-50",
+                "tr": 50,
+                "text": "Oldingi ishidan ketish sababi aniqlanadimi?"
+              },
+              {
+                "code": "1-51",
+                "tr": 51,
+                "text": "Qachondan ish boshlay olishi aniqlanadimi?"
+              },
+              {
+                "code": "1-52",
+                "tr": 52,
+                "text": "Maosh kutuvi so‘raladimi?"
+              },
+              {
+                "code": "1-53",
+                "tr": 53,
+                "text": "Ish jadvaliga mosligi tekshiriladimi?"
+              },
+              {
+                "code": "1-54",
+                "tr": 54,
+                "text": "Ish joyiga kelish imkoniyati tekshiriladimi?"
+              },
+              {
+                "code": "1-55",
+                "tr": 55,
+                "text": "Kommunikatsiya qobiliyati baholanadimi?"
+              },
+              {
+                "code": "1-56",
+                "tr": 56,
+                "text": "Motivatsiyasi aniqlanadimi?"
+              },
+              {
+                "code": "1-57",
+                "tr": 57,
+                "text": "Dastlabki screening natijasi qayd qilinadimi?"
+              },
+              {
+                "code": "1-58",
+                "tr": 58,
+                "text": "Screeningdan o‘tmagan nomzodga javob beriladimi?"
+              }
+            ]
+          },
+          {
+            "code": "1.5",
+            "title": "1.5 Intervyu",
+            "questions": [
+              {
+                "code": "1-59",
+                "tr": 59,
+                "text": "Har bir lavozim uchun alohida intervyu savollari mavjudmi?"
+              },
+              {
+                "code": "1-60",
+                "tr": 60,
+                "text": "Intervyu strukturasi standartlashtirilganmi?"
+              },
+              {
+                "code": "1-61",
+                "tr": 61,
+                "text": "Lavozim vazifalari tushuntiriladimi?"
+              },
+              {
+                "code": "1-62",
+                "tr": 62,
+                "text": "KPIlar tushuntiriladimi?"
+              },
+              {
+                "code": "1-63",
+                "tr": 63,
+                "text": "Sinov muddati shartlari tushuntiriladimi?"
+              },
+              {
+                "code": "1-64",
+                "tr": 64,
+                "text": "Maosh va bonus tizimi tushuntiriladimi?"
+              },
+              {
+                "code": "1-65",
+                "tr": 65,
+                "text": "Rahbar va jamoa haqida ma’lumot beriladimi?"
+              },
+              {
+                "code": "1-66",
+                "tr": 66,
+                "text": "Kompaniya qadriyatlariga mosligi tekshiriladimi?"
+              },
+              {
+                "code": "1-67",
+                "tr": 67,
+                "text": "Vaziyatli savollar beriladimi?"
+              },
+              {
+                "code": "1-68",
+                "tr": 68,
+                "text": "Oldingi ish natijalari haqida so‘raladimi?"
+              },
+              {
+                "code": "1-69",
+                "tr": 69,
+                "text": "Intizom va vaqt boshqaruvi baholanadimi?"
+              },
+              {
+                "code": "1-70",
+                "tr": 70,
+                "text": "Muammoli vaziyatlarga munosabati tekshiriladimi?"
+              },
+              {
+                "code": "1-71",
+                "tr": 71,
+                "text": "Nomzodning kuchli va zaif tomonlari qayd qilinadimi?"
+              },
+              {
+                "code": "1-72",
+                "tr": 72,
+                "text": "Intervyu natijasi ball bilan baholanadimi?"
+              },
+              {
+                "code": "1-73",
+                "tr": 73,
+                "text": "Yakuniy xulosa yoziladimi?"
+              },
+              {
+                "code": "1-74",
+                "tr": 74,
+                "text": "Ishga qabul qilish qarori uchun mas’ul shaxs aniqmi?"
+              }
+            ]
+          },
+          {
+            "code": "1.6",
+            "title": "1.6 Test va amaliy sinov",
+            "questions": [
+              {
+                "code": "1-75",
+                "tr": 75,
+                "text": "Har bir lavozim uchun test topshirig‘i mavjudmi?"
+              },
+              {
+                "code": "1-76",
+                "tr": 76,
+                "text": "Amaliy topshiriq mavjudmi?"
+              },
+              {
+                "code": "1-77",
+                "tr": 77,
+                "text": "Topshiriq formati oldindan tushuntiriladimi?"
+              },
+              {
+                "code": "1-78",
+                "tr": 78,
+                "text": "Topshiriqni topshirish muddati aniqmi?"
+              },
+              {
+                "code": "1-79",
+                "tr": 79,
+                "text": "Baholash mezonlari mavjudmi?"
+              },
+              {
+                "code": "1-80",
+                "tr": 80,
+                "text": "Amaliy topshiriqni mutaxassis baholaydimi?"
+              },
+              {
+                "code": "1-81",
+                "tr": 81,
+                "text": "Kasbiy bilimlar tekshiriladimi?"
+              },
+              {
+                "code": "1-82",
+                "tr": 82,
+                "text": "Muammoni hal qilish qobiliyati tekshiriladimi?"
+              },
+              {
+                "code": "1-83",
+                "tr": 83,
+                "text": "Ishni rejalashtirish qobiliyati baholanadimi?"
+              },
+              {
+                "code": "1-84",
+                "tr": 84,
+                "text": "Muloqot qobiliyati baholanadimi?"
+              },
+              {
+                "code": "1-85",
+                "tr": 85,
+                "text": "Tashabbuskorlik baholanadimi?"
+              },
+              {
+                "code": "1-86",
+                "tr": 86,
+                "text": "Intizom baholanadimi?"
+              },
+              {
+                "code": "1-87",
+                "tr": 87,
+                "text": "Ishni bajarish sifati baholanadimi?"
+              },
+              {
+                "code": "1-88",
+                "tr": 88,
+                "text": "Natija bazaga kiritiladimi?"
+              },
+              {
+                "code": "1-89",
+                "tr": 89,
+                "text": "Nomzodga feedback beriladimi?"
+              },
+              {
+                "code": "1-90",
+                "tr": 90,
+                "text": "Test natijalari tahlil qilinadimi?"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "stage_2",
+        "sheetName": "2. Pre-boarding",
+        "shortName": "2. Pre-boarding",
+        "title": "2. Pre-boarding — ISHGA CHIQISHGACHA TAYYORLASH",
+        "blocks": [
+          {
+            "code": "2.1",
+            "title": "2.1 Pre-boarding tizimi va standartlari",
+            "questions": [
+              {
+                "code": "2-1",
+                "tr": 1,
+                "text": "Kompaniyada Pre-boardingning aniq standart jarayoni mavjudmi?"
+              },
+              {
+                "code": "2-2",
+                "tr": 2,
+                "text": "Pre-boarding qachondan boshlanishi aniq belgilanganmi?"
+              },
+              {
+                "code": "2-3",
+                "tr": 3,
+                "text": "Pre-boarding qachon yakunlanishi aniq belgilanganmi?"
+              },
+              {
+                "code": "2-4",
+                "tr": 4,
+                "text": "Pre-boarding uchun mas’ul shaxs belgilanganmi?"
+              },
+              {
+                "code": "2-5",
+                "tr": 5,
+                "text": "Har bir lavozim uchun alohida Pre-boarding dasturi mavjudmi?"
+              },
+              {
+                "code": "2-6",
+                "tr": 6,
+                "text": "Pre-boarding bosqichlari ketma-ketligi yozib qo‘yilganmi?"
+              },
+              {
+                "code": "2-7",
+                "tr": 7,
+                "text": "Pre-boarding checklist mavjudmi?"
+              },
+              {
+                "code": "2-8",
+                "tr": 8,
+                "text": "Har bir lavozim uchun Pre-boarding o‘quv dasturi mavjudmi?"
+              },
+              {
+                "code": "2-9",
+                "tr": 9,
+                "text": "Lavozim uchun zarur bilim va ko‘nikmalar ro‘yxati belgilanganmi?"
+              },
+              {
+                "code": "2-10",
+                "tr": 10,
+                "text": "O‘quv dasturi ishlab chiqilganmi va real lavozim talablariga moslashtirilganmi?"
+              },
+              {
+                "code": "2-11",
+                "tr": 11,
+                "text": "Dars/modullar ketma-ketligi aniq belgilanganmi?"
+              },
+              {
+                "code": "2-12",
+                "tr": 12,
+                "text": "Har bir modulning maqsadi mavjudmi?"
+              },
+              {
+                "code": "2-13",
+                "tr": 13,
+                "text": "Har bir modul uchun standart o‘quv materiali mavjudmi?"
+              },
+              {
+                "code": "2-14",
+                "tr": 14,
+                "text": "Har bir asosiy moduldan keyin topshiriq mavjudmi?"
+              },
+              {
+                "code": "2-15",
+                "tr": 15,
+                "text": "Har bir xodim bo‘yicha checklist to‘ldirilishi nazorat qilinadimi?"
+              },
+              {
+                "code": "2-16",
+                "tr": 16,
+                "text": "Xodim o‘rgangan bilimini amaliy topshiriq orqali ko‘rsatadimi?"
+              }
+            ]
+          },
+          {
+            "code": "2.2",
+            "title": "2.2 Professional va mahsulot tayyorgarligi",
+            "questions": [
+              {
+                "code": "2-17",
+                "tr": 17,
+                "text": "Kerakli texnik bilim va platformalardan foydalanish bo‘yicha dars mavjudmi?"
+              },
+              {
+                "code": "2-18",
+                "tr": 18,
+                "text": "Xodim platformalarda mustaqil ishlashni amalda ko‘rsatadimi?"
+              },
+              {
+                "code": "2-19",
+                "tr": 19,
+                "text": "Texnik bilimlar bo‘yicha test yoki amaliy topshiriq mavjudmi?"
+              },
+              {
+                "code": "2-20",
+                "tr": 20,
+                "text": "Xodim lavozimiga kerakli professional bilimlarni oldindan o‘rganadimi?"
+              },
+              {
+                "code": "2-21",
+                "tr": 21,
+                "text": "Xodim kompaniyaning mahsulot/xizmatlari bilan tanishadimi?"
+              },
+              {
+                "code": "2-22",
+                "tr": 22,
+                "text": "Mahsulot yoki xizmatning asosiy xususiyatlari tushuntiriladimi?"
+              },
+              {
+                "code": "2-23",
+                "tr": 23,
+                "text": "Mahsulot/xizmatning asosiy afzalliklari va qiymati tushuntiriladimi?"
+              },
+              {
+                "code": "2-24",
+                "tr": 24,
+                "text": "Asosiy mijoz profili va ehtiyojlari tushuntiriladimi?"
+              },
+              {
+                "code": "2-25",
+                "tr": 25,
+                "text": "Lavozimga tegishli asosiy jarayon va standartlar oldindan o‘rgatiladimi?"
+              }
+            ]
+          },
+          {
+            "code": "2.3",
+            "title": "2.3 Test va assessment",
+            "questions": [
+              {
+                "code": "2-26",
+                "tr": 26,
+                "text": "Pre-boarding davomida bilimni tekshiruvchi test mavjudmi?"
+              },
+              {
+                "code": "2-27",
+                "tr": 27,
+                "text": "Test savollari lavozimga moslashtirilganmi?"
+              },
+              {
+                "code": "2-28",
+                "tr": 28,
+                "text": "Test uchun minimal o‘tish bali belgilanganmi?"
+              },
+              {
+                "code": "2-29",
+                "tr": 29,
+                "text": "Testdan o‘ta olmagan xodim uchun qayta tayyorlash tartibi mavjudmi?"
+              },
+              {
+                "code": "2-30",
+                "tr": 30,
+                "text": "Pre-boarding yakuniy assessmenti mavjudmi?"
+              },
+              {
+                "code": "2-31",
+                "tr": 31,
+                "text": "Assessment xodimning ish boshlashga tayyorligini tekshiradimi?"
+              },
+              {
+                "code": "2-32",
+                "tr": 32,
+                "text": "Xodim barcha majburiy Pre-boarding bosqichlarini tugatganligi tekshiriladimi?"
+              },
+              {
+                "code": "2-33",
+                "tr": 33,
+                "text": "Pre-boarding yakunlangani va xodim Onboardingga o‘tkazilgani qayd qilinadimi?"
+              }
+            ]
+          },
+          {
+            "code": "2.4",
+            "title": "2.4 Modul standarti va tayyorlov",
+            "questions": [
+              {
+                "code": "2-34",
+                "tr": 34,
+                "text": "Pre-boarding modullari umumiy va lavozimga xos turlarga ajratilganmi?"
+              },
+              {
+                "code": "2-35",
+                "tr": 35,
+                "text": "Har bir modulda video darslik, checklist va attestatsiya bormi?"
+              },
+              {
+                "code": "2-36",
+                "tr": 36,
+                "text": "Xodimga 1-kundan oldin xush kelibsiz xabari (1-kun rejasi, manzil, vaqt) yuboriladimi?"
+              },
+              {
+                "code": "2-37",
+                "tr": 37,
+                "text": "Ish joyi, jihoz va accesslar 1-kundan oldin tayyorligi tekshiriladimi?"
+              },
+              {
+                "code": "2-38",
+                "tr": 38,
+                "text": "Jamoaga yangi xodim haqida oldindan e’lon qilinadimi?"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "stage_3",
+        "sheetName": "3. On-boarding",
+        "shortName": "3. On-boarding",
+        "title": "3. On-boarding — YANGI XODIMNI MOSLASHTIRISH",
+        "blocks": [
+          {
+            "code": "3.1",
+            "title": "3.1 Onboarding tizimi",
+            "questions": [
+              {
+                "code": "3-1",
+                "tr": 1,
+                "text": "Kompaniyada standartlashtirilgan Onboarding tizimi mavjudmi?"
+              },
+              {
+                "code": "3-2",
+                "tr": 2,
+                "text": "Onboarding jarayonining aniq boshlanish va yakunlanish nuqtalari belgilanganmi?"
+              },
+              {
+                "code": "3-3",
+                "tr": 3,
+                "text": "Har bir lavozim uchun Onboarding davomiyligi belgilanganmi?"
+              },
+              {
+                "code": "3-4",
+                "tr": 4,
+                "text": "Har bir lavozim uchun alohida Onboarding dasturi mavjudmi?"
+              },
+              {
+                "code": "3-5",
+                "tr": 5,
+                "text": "Onboarding uchun mas’ul shaxs belgilanganmi?"
+              },
+              {
+                "code": "3-6",
+                "tr": 6,
+                "text": "HR, rahbar va mentorning Onboardingdagi vazifalari aniq taqsimlanganmi?"
+              },
+              {
+                "code": "3-7",
+                "tr": 7,
+                "text": "Onboarding bosqichlari aniq ketma-ketlikda yozilganmi?"
+              },
+              {
+                "code": "3-8",
+                "tr": 8,
+                "text": "Onboarding checklist mavjudmi?"
+              },
+              {
+                "code": "3-9",
+                "tr": 9,
+                "text": "Har bir yangi xodim uchun Onboarding checklist yuritiladimi?"
+              },
+              {
+                "code": "3-10",
+                "tr": 10,
+                "text": "Xodimning Onboardingdagi progressini kuzatish tizimi mavjudmi?"
+              },
+              {
+                "code": "3-11",
+                "tr": 11,
+                "text": "Onboarding jarayonining bajarilishi rahbar yoki HR tomonidan nazorat qilinadimi?"
+              },
+              {
+                "code": "3-12",
+                "tr": 12,
+                "text": "Onboarding jarayonining yakuniy natijasi qayd etiladimi?"
+              }
+            ]
+          },
+          {
+            "code": "3.2",
+            "title": "3.2 Xodimni lavozimga kiritish",
+            "questions": [
+              {
+                "code": "3-13",
+                "tr": 13,
+                "text": "Xodimga uning lavozimining asosiy maqsadi tushuntiriladimi?"
+              },
+              {
+                "code": "3-14",
+                "tr": 14,
+                "text": "Lavozim vazifalari aniq tushuntiriladimi?"
+              },
+              {
+                "code": "3-15",
+                "tr": 15,
+                "text": "Xodimdan kutiladigan ish natijalari tushuntiriladimi?"
+              },
+              {
+                "code": "3-16",
+                "tr": 16,
+                "text": "Xodimning vakolatlari va javobgarliklari tushuntiriladimi?"
+              },
+              {
+                "code": "3-17",
+                "tr": 17,
+                "text": "Xodim kimga bo‘ysunishi va kimga hisobot berishi tushuntiriladimi?"
+              },
+              {
+                "code": "3-18",
+                "tr": 18,
+                "text": "Xodim kimlar bilan hamkorlik qilishi tushuntiriladimi?"
+              },
+              {
+                "code": "3-19",
+                "tr": 19,
+                "text": "Xodimning asosiy ish jarayonlari tushuntiriladimi?"
+              },
+              {
+                "code": "3-20",
+                "tr": 20,
+                "text": "Xodimga ishni bajarishning standart tartibi ko‘rsatiladimi?"
+              },
+              {
+                "code": "3-21",
+                "tr": 21,
+                "text": "Xodimning sinov muddati maqsadlari tushuntiriladimi?"
+              },
+              {
+                "code": "3-22",
+                "tr": 22,
+                "text": "Xodimning lavozim bo‘yicha muvaffaqiyat mezonlari aniq tushuntiriladimi?"
+              }
+            ]
+          },
+          {
+            "code": "3.3",
+            "title": "3.3 Kompaniya va jamoaga integratsiya",
+            "questions": [
+              {
+                "code": "3-23",
+                "tr": 23,
+                "text": "Xodim kompaniyaning asosiy maqsadlarini tushunadimi?"
+              },
+              {
+                "code": "3-24",
+                "tr": 24,
+                "text": "Xodim kompaniyaning qadriyatlarini tushunadimi?"
+              },
+              {
+                "code": "3-25",
+                "tr": 25,
+                "text": "Xodim kompaniya va bo‘limlar o‘rtasidagi bog‘liqlikni tushunadimi?"
+              },
+              {
+                "code": "3-26",
+                "tr": 26,
+                "text": "Xodim o‘z jamoasi bilan tanishtiriladimi?"
+              },
+              {
+                "code": "3-27",
+                "tr": 27,
+                "text": "Xodim jamoa a’zolarining vazifalarini tushunadimi?"
+              },
+              {
+                "code": "3-28",
+                "tr": 28,
+                "text": "Xodim boshqa bo‘limlar bilan ishlash tartibini tushunadimi?"
+              },
+              {
+                "code": "3-29",
+                "tr": 29,
+                "text": "Ichki kommunikatsiya qoidalari tushuntiriladimi?"
+              },
+              {
+                "code": "3-30",
+                "tr": 30,
+                "text": "Rahbar bilan ishlash va murojaat qilish tartibi tushuntiriladimi?"
+              },
+              {
+                "code": "3-31",
+                "tr": 31,
+                "text": "Majlislar va yig‘ilishlarda ishtirok etish tartibi tushuntiriladimi?"
+              },
+              {
+                "code": "3-32",
+                "tr": 32,
+                "text": "Xodim kompaniyaning ichki ish muhitiga moslashishi kuzatiladimi?"
+              }
+            ]
+          },
+          {
+            "code": "3.4",
+            "title": "3.4 Ish platformalari va instrumentlar",
+            "questions": [
+              {
+                "code": "3-33",
+                "tr": 33,
+                "text": "Xodim foydalanadigan barcha asosiy platformalar bo‘yicha o‘qitiladimi?"
+              },
+              {
+                "code": "3-34",
+                "tr": 34,
+                "text": "Platformalardan foydalanish bo‘yicha standart yo‘riqnomalar mavjudmi?"
+              },
+              {
+                "code": "3-35",
+                "tr": 35,
+                "text": "Xodim platformalarda real ish vazifalarini bajarib ko‘radimi?"
+              },
+              {
+                "code": "3-36",
+                "tr": 36,
+                "text": "Xodim ishda foydalanadigan asosiy instrumentlar o‘rgatiladimi?"
+              },
+              {
+                "code": "3-37",
+                "tr": 37,
+                "text": "Hisobot yuritish tartibi o‘rgatiladimi?"
+              },
+              {
+                "code": "3-38",
+                "tr": 38,
+                "text": "Vazifalarni olish, bajarish va topshirish tartibi amalda o‘rgatiladimi?"
+              },
+              {
+                "code": "3-39",
+                "tr": 39,
+                "text": "Xodim foydalanadigan tizimlarda mustaqil ishlay olishi tekshiriladimi?"
+              },
+              {
+                "code": "3-40",
+                "tr": 40,
+                "text": "Platforma va instrumentlar bo‘yicha amaliy topshiriqlar mavjudmi?"
+              }
+            ]
+          },
+          {
+            "code": "3.5",
+            "title": "3.5 Mahsulot, xizmat va ish mazmuni",
+            "questions": [
+              {
+                "code": "3-41",
+                "tr": 41,
+                "text": "Xodim kompaniyaning mahsulot yoki xizmatlarini biladimi?"
+              },
+              {
+                "code": "3-42",
+                "tr": 42,
+                "text": "Xodim o‘z ishiga tegishli mahsulot yoki xizmatning asosiy xususiyatlarini biladimi?"
+              },
+              {
+                "code": "3-43",
+                "tr": 43,
+                "text": "Xodim mahsulot yoki xizmatning mijoz uchun qiymatini tushunadimi?"
+              },
+              {
+                "code": "3-44",
+                "tr": 44,
+                "text": "Xodim asosiy mijoz yoki foydalanuvchi profilini tushunadimi?"
+              },
+              {
+                "code": "3-45",
+                "tr": 45,
+                "text": "Xodim mijozning asosiy ehtiyoj va muammolarini biladimi?"
+              },
+              {
+                "code": "3-46",
+                "tr": 46,
+                "text": "Xodim mahsulot/xizmat bo‘yicha asosiy savollarga javob bera oladimi?"
+              },
+              {
+                "code": "3-47",
+                "tr": 47,
+                "text": "Xodim o‘z ishiga tegishli standartlar va qoidalarni biladimi?"
+              },
+              {
+                "code": "3-48",
+                "tr": 48,
+                "text": "Xodim ishida yuzaga keladigan asosiy vaziyatlarda qanday harakat qilishni biladimi?"
+              }
+            ]
+          },
+          {
+            "code": "3.6",
+            "title": "3.6 Amaliyot va real ishga chiqarish",
+            "questions": [
+              {
+                "code": "3-49",
+                "tr": 49,
+                "text": "Har bir asosiy o‘quv modulidan keyin amaliy topshiriq mavjudmi?"
+              },
+              {
+                "code": "3-50",
+                "tr": 50,
+                "text": "Amaliy topshiriqlar real ish vazifalariga asoslanganmi?"
+              },
+              {
+                "code": "3-51",
+                "tr": 51,
+                "text": "Xodim real ish jarayonlarini amalda bajarib ko‘radimi?"
+              },
+              {
+                "code": "3-52",
+                "tr": 52,
+                "text": "Xodimning topshiriqlarini tekshirish uchun mas’ul shaxs belgilanganmi?"
+              },
+              {
+                "code": "3-53",
+                "tr": 53,
+                "text": "Topshiriqlarni baholash mezonlari mavjudmi?"
+              },
+              {
+                "code": "3-54",
+                "tr": 54,
+                "text": "Bajarilgan topshiriqlar natijasi qayd etiladimi?"
+              },
+              {
+                "code": "3-55",
+                "tr": 55,
+                "text": "Xodimga bajargan ishlari bo‘yicha feedback beriladimi?"
+              },
+              {
+                "code": "3-56",
+                "tr": 56,
+                "text": "Xodim qilgan xatolari tahlil qilinadimi?"
+              },
+              {
+                "code": "3-57",
+                "tr": 57,
+                "text": "Aniqlangan kamchiliklar bo‘yicha qayta o‘qitish amalga oshiriladimi?"
+              },
+              {
+                "code": "3-58",
+                "tr": 58,
+                "text": "Xodim bosqichma-bosqich mustaqil ishga o‘tkaziladimi?"
+              }
+            ]
+          },
+          {
+            "code": "3.7",
+            "title": "3.7 Baholash va mustaqil ishlashga tayyorlik",
+            "questions": [
+              {
+                "code": "3-59",
+                "tr": 59,
+                "text": "Onboarding davomida xodimning bilimlari muntazam tekshiriladimi?"
+              },
+              {
+                "code": "3-60",
+                "tr": 60,
+                "text": "Xodimning amaliy ko‘nikmalari baholanadimi?"
+              },
+              {
+                "code": "3-61",
+                "tr": 61,
+                "text": "Har bir asosiy bosqich uchun baholash mezonlari mavjudmi?"
+              },
+              {
+                "code": "3-62",
+                "tr": 62,
+                "text": "Xodimning ishni mustaqil bajarish qobiliyati tekshiriladimi?"
+              },
+              {
+                "code": "3-63",
+                "tr": 63,
+                "text": "Yakuniy Onboarding assessmenti mavjudmi?"
+              },
+              {
+                "code": "3-64",
+                "tr": 64,
+                "text": "Yakuniy assessment nazariy va amaliy bilimlarni qamrab oladimi?"
+              },
+              {
+                "code": "3-65",
+                "tr": 65,
+                "text": "Onboardingni muvaffaqiyatli tugatish mezonlari belgilanganmi?"
+              },
+              {
+                "code": "3-66",
+                "tr": 66,
+                "text": "Xodimning mustaqil ishlashga tayyorligi rahbar tomonidan tasdiqlanadimi?"
+              },
+              {
+                "code": "3-67",
+                "tr": 67,
+                "text": "Onboarding yakunida xodimning kuchli va zaif tomonlari qayd etiladimi?"
+              },
+              {
+                "code": "3-68",
+                "tr": 68,
+                "text": "Onboarding yakunida xodim uchun keyingi rivojlanish nuqtalari belgilanadimi?"
+              }
+            ]
+          },
+          {
+            "code": "3.8",
+            "title": "3.8 KPI va dastlabki natijalar",
+            "questions": [
+              {
+                "code": "3-69",
+                "tr": 69,
+                "text": "Xodimga lavozim KPIlari tushuntirilganmi?"
+              },
+              {
+                "code": "3-70",
+                "tr": 70,
+                "text": "KPIlarni hisoblash va baholash tartibi tushuntirilganmi?"
+              },
+              {
+                "code": "3-71",
+                "tr": 71,
+                "text": "Xodim o‘z natijalarini qanday kuzatishni biladimi?"
+              },
+              {
+                "code": "3-72",
+                "tr": 72,
+                "text": "Xodimning dastlabki natijalari muntazam kuzatiladimi?"
+              },
+              {
+                "code": "3-73",
+                "tr": 73,
+                "text": "Xodim natijalari bo‘yicha rahbar tomonidan feedback beriladimi?"
+              },
+              {
+                "code": "3-74",
+                "tr": 74,
+                "text": "Onboarding davomida xodim real KPI bilan ishlashni boshlaydimi?"
+              },
+              {
+                "code": "3-75",
+                "tr": 75,
+                "text": "Xodimning dastlabki natijalari Onboarding yakunida tahlil qilinadimi?"
+              }
+            ]
+          },
+          {
+            "code": "3.9",
+            "title": "3.9 Onboarding yakuni va keyingi rivojlanish",
+            "questions": [
+              {
+                "code": "3-76",
+                "tr": 76,
+                "text": "Onboarding yakunlanganini tasdiqlovchi aniq mezon mavjudmi?"
+              },
+              {
+                "code": "3-77",
+                "tr": 77,
+                "text": "Barcha majburiy darslar va topshiriqlar bajarilgani tekshiriladimi?"
+              },
+              {
+                "code": "3-78",
+                "tr": 78,
+                "text": "Yakuniy assessment natijasi qayd etiladimi?"
+              },
+              {
+                "code": "3-79",
+                "tr": 79,
+                "text": "Xodimning mustaqil ishga o‘tganligi rasmiy qayd etiladimi?"
+              },
+              {
+                "code": "3-80",
+                "tr": 80,
+                "text": "Onboarding natijasi HR va rahbarga topshiriladimi?"
+              },
+              {
+                "code": "3-81",
+                "tr": 81,
+                "text": "Xodimning keyingi rivojlanish rejasi belgilanadimi?"
+              },
+              {
+                "code": "3-82",
+                "tr": 82,
+                "text": "Sinov muddati davomida xodimni kuzatish mexanizmi mavjudmi?"
+              },
+              {
+                "code": "3-83",
+                "tr": 83,
+                "text": "Onboardingdan keyin xodimdan feedback olinadimi?"
+              },
+              {
+                "code": "3-84",
+                "tr": 84,
+                "text": "Xodimning Onboarding tajribasi tahlil qilinadimi?"
+              },
+              {
+                "code": "3-85",
+                "tr": 85,
+                "text": "Onboarding tizimining samaradorligi muntazam o‘lchanadimi?"
+              },
+              {
+                "code": "3-86",
+                "tr": 86,
+                "text": "Onboarding natijalariga asoslanib dastur muntazam takomillashtiriladimi?"
+              }
+            ]
+          },
+          {
+            "code": "3.10",
+            "title": "3.10 Korporativ madaniyat va attestatsiya qoidalari",
+            "questions": [
+              {
+                "code": "3-87",
+                "tr": 87,
+                "text": "Korporativ madaniyat bo‘yicha alohida modul mavjudmi?"
+              },
+              {
+                "code": "3-88",
+                "tr": 88,
+                "text": "Madaniyatga moslashuv mentor kuzatuv checklisti bilan baholanadimi?"
+              },
+              {
+                "code": "3-89",
+                "tr": 89,
+                "text": "Attestatsiya qoidalari (o‘tish bali, KRITIK topshiriqlar, qayta topshirish) yozma tasdiqlanganmi?"
+              },
+              {
+                "code": "3-90",
+                "tr": 90,
+                "text": "Xodim attestatsiya natijasiga e’tiroz bildirish tartibi mavjudmi?"
+              },
+              {
+                "code": "3-91",
+                "tr": 91,
+                "text": "Har modul oxirida xodimdan modul bahosi (tushunarlilik, foydalilik) olinadimi?"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "stage_4",
+        "sheetName": "4. Development",
+        "shortName": "4. Development",
+        "title": "4. Development — NATIJA, RIVOJLANISH VA USHLAB QOLISH",
+        "blocks": [
+          {
+            "code": "4.1",
+            "title": "4.1 KPI",
+            "questions": [
+              {
+                "code": "4-1",
+                "tr": 1,
+                "text": "Har bir lavozim uchun KPI mavjudmi?"
+              },
+              {
+                "code": "4-2",
+                "tr": 2,
+                "text": "KPI xodimga tushuntirilganmi?"
+              },
+              {
+                "code": "4-3",
+                "tr": 3,
+                "text": "KPI hisoblash formulasi aniqmi?"
+              },
+              {
+                "code": "4-4",
+                "tr": 4,
+                "text": "KPI muntazam kuzatiladimi?"
+              },
+              {
+                "code": "4-5",
+                "tr": 5,
+                "text": "KPI muntazam tahlil qilinadimi?"
+              },
+              {
+                "code": "4-6",
+                "tr": 6,
+                "text": "KPIlar biznes maqsadlari bilan bog‘langanmi?"
+              },
+              {
+                "code": "4-7",
+                "tr": 7,
+                "text": "KPIlar muntazam qayta ko‘rib chiqiladimi?"
+              }
+            ]
+          },
+          {
+            "code": "4.2",
+            "title": "4.2 Vazifalar va nazorat",
+            "questions": [
+              {
+                "code": "4-8",
+                "tr": 8,
+                "text": "Vazifalar yozma beriladimi?"
+              },
+              {
+                "code": "4-9",
+                "tr": 9,
+                "text": "Vazifalarning deadline'i belgilanadimi?"
+              },
+              {
+                "code": "4-10",
+                "tr": 10,
+                "text": "Vazifalar ustuvorligi belgilanadimi?"
+              },
+              {
+                "code": "4-11",
+                "tr": 11,
+                "text": "Vazifa bajarilishi nazorat qilinadimi?"
+              },
+              {
+                "code": "4-12",
+                "tr": 12,
+                "text": "Bajarilgan ish sifati tekshiriladimi?"
+              },
+              {
+                "code": "4-13",
+                "tr": 13,
+                "text": "Xodimning ish yuklamasi kuzatiladimi?"
+              },
+              {
+                "code": "4-14",
+                "tr": 14,
+                "text": "Ish natijasi muntazam qayd qilinadimi?"
+              },
+              {
+                "code": "4-15",
+                "tr": 15,
+                "text": "Past natijalar bo‘yicha sabab tahlil qilinadimi?"
+              },
+              {
+                "code": "4-16",
+                "tr": 16,
+                "text": "Past natijali xodim uchun Development Plan tuziladimi?"
+              }
+            ]
+          },
+          {
+            "code": "4.3",
+            "title": "4.3 Feedback va 1:1",
+            "questions": [
+              {
+                "code": "4-17",
+                "tr": 17,
+                "text": "Rahbar xodim bilan muntazam 1:1 o‘tkazadimi?"
+              },
+              {
+                "code": "4-18",
+                "tr": 18,
+                "text": "Feedback berish standarti mavjudmi?"
+              },
+              {
+                "code": "4-19",
+                "tr": 19,
+                "text": "Feedback yozib boriladimi?"
+              },
+              {
+                "code": "4-20",
+                "tr": 20,
+                "text": "Xodim o‘z fikrini bildira oladimi?"
+              },
+              {
+                "code": "4-21",
+                "tr": 21,
+                "text": "Rahbarning boshqaruv sifati baholanadimi?"
+              },
+              {
+                "code": "4-22",
+                "tr": 22,
+                "text": "Bo‘lim natijalari muntazam ko‘rib chiqiladimi?"
+              },
+              {
+                "code": "4-23",
+                "tr": 23,
+                "text": "Oylik natijalar tahlili mavjudmi?"
+              },
+              {
+                "code": "4-24",
+                "tr": 24,
+                "text": "Natijalar bo‘yicha action plan tuziladimi?"
+              }
+            ]
+          },
+          {
+            "code": "4.4",
+            "title": "4.4 Rivojlanish va karyera",
+            "questions": [
+              {
+                "code": "4-25",
+                "tr": 25,
+                "text": "Har bir lavozim uchun career path mavjudmi?"
+              },
+              {
+                "code": "4-26",
+                "tr": 26,
+                "text": "Lavozim bo‘yicha o‘sish mezonlari yozilganmi?"
+              },
+              {
+                "code": "4-27",
+                "tr": 27,
+                "text": "Har bir lavozim uchun kerakli kompetensiyalar ro‘yxati mavjudmi?"
+              },
+              {
+                "code": "4-28",
+                "tr": 28,
+                "text": "Junior/Middle/Senior darajalari belgilanganmi?"
+              },
+              {
+                "code": "4-29",
+                "tr": 29,
+                "text": "Ichki treninglar rejasi mavjudmi?"
+              },
+              {
+                "code": "4-30",
+                "tr": 30,
+                "text": "Tashqi treningga yuborish mezonlari mavjudmi?"
+              },
+              {
+                "code": "4-31",
+                "tr": 31,
+                "text": "Har bir xodim uchun development plan mavjudmi?"
+              },
+              {
+                "code": "4-32",
+                "tr": 32,
+                "text": "Development plan rahbar bilan muntazam ko‘rib chiqiladimi?"
+              },
+              {
+                "code": "4-33",
+                "tr": 33,
+                "text": "Treningdan keyin bilim tekshiriladimi?"
+              },
+              {
+                "code": "4-34",
+                "tr": 34,
+                "text": "O‘rganilgan bilim amalda qo‘llanilishi kuzatiladimi?"
+              },
+              {
+                "code": "4-35",
+                "tr": 35,
+                "text": "Kuchli xodimlar aniqlanadimi?"
+              },
+              {
+                "code": "4-36",
+                "tr": 36,
+                "text": "High-potential xodimlar alohida kuzatiladimi?"
+              },
+              {
+                "code": "4-37",
+                "tr": 37,
+                "text": "Ichki lavozimlarga xodimlar tayyorlanadimi?"
+              },
+              {
+                "code": "4-38",
+                "tr": 38,
+                "text": "Zaxira kadrlar bazasi mavjudmi?"
+              },
+              {
+                "code": "4-39",
+                "tr": 39,
+                "text": "Zaxira kadrlar muntazam baholanadimi?"
+              },
+              {
+                "code": "4-40",
+                "tr": 40,
+                "text": "Muhim lavozimlar uchun successor mavjudmi?"
+              },
+              {
+                "code": "4-41",
+                "tr": 41,
+                "text": "Ichki promotion statistikasi yuritiladimi?"
+              }
+            ]
+          },
+          {
+            "code": "4.5",
+            "title": "4.5 Motivatsiya",
+            "questions": [
+              {
+                "code": "4-42",
+                "tr": 42,
+                "text": "Asosiy maosh tizimi aniqmi?"
+              },
+              {
+                "code": "4-43",
+                "tr": 43,
+                "text": "Bonus tizimi yozilganmi?"
+              },
+              {
+                "code": "4-44",
+                "tr": 44,
+                "text": "Bonus KPI bilan bog‘langanmi?"
+              },
+              {
+                "code": "4-45",
+                "tr": 45,
+                "text": "Rag‘batlantirish tizimi mavjudmi?"
+              },
+              {
+                "code": "4-46",
+                "tr": 46,
+                "text": "Eng yaxshi xodimni aniqlash mezonlari mavjudmi?"
+              },
+              {
+                "code": "4-47",
+                "tr": 47,
+                "text": "Yaxshi natijalar jamoa oldida e’tirof etiladimi?"
+              },
+              {
+                "code": "4-48",
+                "tr": 48,
+                "text": "Qo‘shimcha imtiyozlar mavjudmi?"
+              },
+              {
+                "code": "4-49",
+                "tr": 49,
+                "text": "Motivatsiya tizimi samaradorligi tahlil qilinadimi?"
+              }
+            ]
+          },
+          {
+            "code": "4.6",
+            "title": "4.6 Xodimlar qoniqishi",
+            "questions": [
+              {
+                "code": "4-50",
+                "tr": 50,
+                "text": "Xodimlar qoniqishi muntazam o‘lchanadimi?"
+              },
+              {
+                "code": "4-51",
+                "tr": 51,
+                "text": "Employee NPS o‘lchanadimi?"
+              },
+              {
+                "code": "4-52",
+                "tr": 52,
+                "text": "Xodim kompaniyani tavsiya qilishi so‘raladimi?"
+              },
+              {
+                "code": "4-53",
+                "tr": 53,
+                "text": "Past baho bergan xodimlar sababi o‘rganiladimi?"
+              },
+              {
+                "code": "4-54",
+                "tr": 54,
+                "text": "So‘rov natijalari bo‘limlar kesimida tahlil qilinadimi?"
+              },
+              {
+                "code": "4-55",
+                "tr": 55,
+                "text": "Rahbar bo‘yicha qoniqish o‘lchanadimi?"
+              },
+              {
+                "code": "4-56",
+                "tr": 56,
+                "text": "Ish sharoitidan qoniqish o‘lchanadimi?"
+              },
+              {
+                "code": "4-57",
+                "tr": 57,
+                "text": "Maoshdan qoniqish o‘lchanadimi?"
+              },
+              {
+                "code": "4-58",
+                "tr": 58,
+                "text": "Rivojlanish imkoniyatidan qoniqish o‘lchanadimi?"
+              },
+              {
+                "code": "4-59",
+                "tr": 59,
+                "text": "Ish yuklamasidan qoniqish o‘lchanadimi?"
+              }
+            ]
+          },
+          {
+            "code": "4.7",
+            "title": "4.7 Retention",
+            "questions": [
+              {
+                "code": "4-60",
+                "tr": 60,
+                "text": "Turnover ko‘rsatkichi hisoblanadimi?"
+              },
+              {
+                "code": "4-61",
+                "tr": 61,
+                "text": "Turnover bo‘limlar kesimida tahlil qilinadimi?"
+              },
+              {
+                "code": "4-62",
+                "tr": 62,
+                "text": "Sinov muddatida ketganlar ulushi hisoblanadimi?"
+              },
+              {
+                "code": "4-63",
+                "tr": 63,
+                "text": "Kuchli xodimlarning ketish xavfi aniqlanadimi?"
+              },
+              {
+                "code": "4-64",
+                "tr": 64,
+                "text": "Riskli xodimlar bilan retention suhbatlari o‘tkaziladimi?"
+              },
+              {
+                "code": "4-65",
+                "tr": 65,
+                "text": "Maoshni qayta ko‘rib chiqish tartibi mavjudmi?"
+              },
+              {
+                "code": "4-66",
+                "tr": 66,
+                "text": "Ish yuklamasi sabab ketish holatlari tahlil qilinadimi?"
+              },
+              {
+                "code": "4-67",
+                "tr": 67,
+                "text": "Rahbar sabab ketish holatlari tahlil qilinadimi?"
+              },
+              {
+                "code": "4-68",
+                "tr": 68,
+                "text": "Retention KPI mavjudmi?"
+              }
+            ]
+          },
+          {
+            "code": "4.8",
+            "title": "4.8 Bilimni tizimga aylantirish",
+            "questions": [
+              {
+                "code": "4-69",
+                "tr": 69,
+                "text": "Kuchli xodimlar o‘z ish usulini SOP yoki video darsga aylantiradimi?"
+              },
+              {
+                "code": "4-70",
+                "tr": 70,
+                "text": "Bilimlar bazasi kamida chorakda bir marta yangilanadimi?"
+              },
+              {
+                "code": "4-71",
+                "tr": 71,
+                "text": "Har 6 oyda daraja attestatsiyasi o‘tkaziladimi?"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "stage_5",
+        "sheetName": "5. Off-boarding",
+        "shortName": "5. Off-boarding",
+        "title": "5. Off-boarding — ISHDAN CHIQISH",
+        "blocks": [
+          {
+            "code": "5.1",
+            "title": "5.1 Ishdan chiqish",
+            "questions": [
+              {
+                "code": "5-1",
+                "tr": 1,
+                "text": "Ishdan bo‘shash tartibi yozilganmi?"
+              },
+              {
+                "code": "5-2",
+                "tr": 2,
+                "text": "Ishdan chiqish haqida oldindan xabar berish tartibi mavjudmi?"
+              },
+              {
+                "code": "5-3",
+                "tr": 3,
+                "text": "Exit interview o‘tkaziladimi?"
+              },
+              {
+                "code": "5-4",
+                "tr": 4,
+                "text": "Ishdan ketish sababi qayd qilinadimi?"
+              },
+              {
+                "code": "5-5",
+                "tr": 5,
+                "text": "Rahbar haqida feedback olinadimi?"
+              },
+              {
+                "code": "5-6",
+                "tr": 6,
+                "text": "Jamoa haqida feedback olinadimi?"
+              },
+              {
+                "code": "5-7",
+                "tr": 7,
+                "text": "Maosh va bonus bo‘yicha feedback olinadimi?"
+              },
+              {
+                "code": "5-8",
+                "tr": 8,
+                "text": "Ish yuklamasi bo‘yicha feedback olinadimi?"
+              },
+              {
+                "code": "5-9",
+                "tr": 9,
+                "text": "Ketish sabablari muntazam tahlil qilinadimi?"
+              }
+            ]
+          },
+          {
+            "code": "5.2",
+            "title": "5.2 Handover",
+            "questions": [
+              {
+                "code": "5-10",
+                "tr": 10,
+                "text": "Handover checklist mavjudmi?"
+              },
+              {
+                "code": "5-11",
+                "tr": 11,
+                "text": "Xodimning barcha vazifalari ro‘yxatga olinadimi?"
+              },
+              {
+                "code": "5-12",
+                "tr": 12,
+                "text": "Tugallanmagan vazifalar qayd qilinadimi?"
+              },
+              {
+                "code": "5-13",
+                "tr": 13,
+                "text": "Mijozlar topshiriladimi?"
+              },
+              {
+                "code": "5-14",
+                "tr": 14,
+                "text": "Loyihalar topshiriladimi?"
+              },
+              {
+                "code": "5-15",
+                "tr": 15,
+                "text": "Muhim kontaktlar topshiriladimi?"
+              },
+              {
+                "code": "5-16",
+                "tr": 16,
+                "text": "Hujjatlar topshiriladimi?"
+              },
+              {
+                "code": "5-17",
+                "tr": 17,
+                "text": "Jarayonlar va bilimlar topshiriladimi?"
+              },
+              {
+                "code": "5-18",
+                "tr": 18,
+                "text": "Vazifalar uchun yangi mas’ul belgilanadimi?"
+              },
+              {
+                "code": "5-19",
+                "tr": 19,
+                "text": "Handover yakunlanganini rahbar tasdiqlaydimi?"
+              }
+            ]
+          },
+          {
+            "code": "5.3",
+            "title": "5.3 Access va jihozlar",
+            "questions": [
+              {
+                "code": "5-20",
+                "tr": 20,
+                "text": "Kompaniya jihozlari qaytarib olinadimi?"
+              },
+              {
+                "code": "5-21",
+                "tr": 21,
+                "text": "Loginlar bekor qilinadimi?"
+              },
+              {
+                "code": "5-22",
+                "tr": 22,
+                "text": "Email access yopiladimi?"
+              },
+              {
+                "code": "5-23",
+                "tr": 23,
+                "text": "CRM access yopiladimi?"
+              },
+              {
+                "code": "5-24",
+                "tr": 24,
+                "text": "Telegram/ishchi guruhlar nazorat qilinadimi?"
+              },
+              {
+                "code": "5-25",
+                "tr": 25,
+                "text": "Drive/Notion/ClickUp kabi tizimlar accesslari bekor qilinadimi?"
+              },
+              {
+                "code": "5-26",
+                "tr": 26,
+                "text": "Maxfiy ma’lumotlar bo‘yicha nazorat amalga oshiriladimi?"
+              }
+            ]
+          },
+          {
+            "code": "5.4",
+            "title": "5.4 Yakuniy hisob va baza",
+            "questions": [
+              {
+                "code": "5-27",
+                "tr": 27,
+                "text": "Yakuniy hisob-kitob amalga oshiriladimi?"
+              },
+              {
+                "code": "5-28",
+                "tr": 28,
+                "text": "Xodimning yakuniy statusi bazaga kiritiladimi?"
+              },
+              {
+                "code": "5-29",
+                "tr": 29,
+                "text": "Rehire status belgilanadimi?"
+              },
+              {
+                "code": "5-30",
+                "tr": 30,
+                "text": "Kuchli sobiq xodimlar bazasi saqlanadimi?"
+              },
+              {
+                "code": "5-31",
+                "tr": 31,
+                "text": "Offboarding yakuniy hisoboti mavjudmi?"
+              },
+              {
+                "code": "5-32",
+                "tr": 32,
+                "text": "Xodim ketishi sabab biznesga yetgan zarar tahlil qilinadimi?"
+              },
+              {
+                "code": "5-33",
+                "tr": 33,
+                "text": "Muhim lavozim bo‘shaganda replacement plan mavjudmi?"
+              }
+            ]
+          },
+          {
+            "code": "5.5",
+            "title": "5.5 Xayrlashuv va alumni",
+            "questions": [
+              {
+                "code": "5-34",
+                "tr": 34,
+                "text": "Ketayotgan xodim bilan jamoa oldida hurmatli xayrlashuv o‘tkaziladimi?"
+              },
+              {
+                "code": "5-35",
+                "tr": 35,
+                "text": "Tashakkurnoma yoki tavsiyanoma beriladimi?"
+              },
+              {
+                "code": "5-36",
+                "tr": 36,
+                "text": "Sobiq xodimlar (alumni) bazasi bilan aloqa saqlanadimi?"
+              },
+              {
+                "code": "5-37",
+                "tr": 37,
+                "text": "Alumni korporativ tadbir va kurslarga taklif qilinadimi?"
+              },
+              {
+                "code": "5-38",
+                "tr": 38,
+                "text": "Kuchli sobiq xodimlarga yangi vakansiyada birinchi bo‘lib taklif beriladimi?"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "stage_6",
+        "sheetName": "6. EJM boshqaruvi",
+        "shortName": "6. EJM boshqaruvi",
+        "title": "6. EJM boshqaruvi — PAKETLAR, PILOT VA SAMARADORLIK",
+        "blocks": [
+          {
+            "code": "6.1",
+            "title": "6.1 Lavozim paketlari",
+            "questions": [
+              {
+                "code": "6-1",
+                "tr": 1,
+                "text": "Har bir lavozim uchun lavozim paketi (profil, portret, SOP, video, test banki, KPI kartasi, karyera xaritasi) mavjudmi?"
+              },
+              {
+                "code": "6-2",
+                "tr": 2,
+                "text": "Paketlar versiyasi, sanasi va mas’uli bilan yuritiladimi?"
+              },
+              {
+                "code": "6-3",
+                "tr": 3,
+                "text": "Paket yiliga kamida 1 marta qayta ko‘rib chiqiladimi?"
+              },
+              {
+                "code": "6-4",
+                "tr": 4,
+                "text": "Umumiy modullar kompaniyada bir marta qurilib, barcha lavozimlarda qayta ishlatiladimi?"
+              }
+            ]
+          },
+          {
+            "code": "6.2",
+            "title": "6.2 Diagnostika va pilot",
+            "questions": [
+              {
+                "code": "6-5",
+                "tr": 5,
+                "text": "Kuchli xodim diagnostikasi uchun standart intervyu skripti mavjudmi?"
+              },
+              {
+                "code": "6-6",
+                "tr": 6,
+                "text": "Yangi EJM avval bitta lavozimda pilot sifatida sinaladimi?"
+              },
+              {
+                "code": "6-7",
+                "tr": 7,
+                "text": "Pilot natijalari bo‘yicha EJM tuzatiladimi?"
+              }
+            ]
+          },
+          {
+            "code": "6.3",
+            "title": "6.3 Samaradorlik ko‘rsatkichlari",
+            "questions": [
+              {
+                "code": "6-8",
+                "tr": 8,
+                "text": "EJM joriy qilinishidan oldingi ko‘rsatkichlar qayd etilganmi?"
+              },
+              {
+                "code": "6-9",
+                "tr": 9,
+                "text": "Mustaqil ishga o‘tish muddati o‘lchanadimi?"
+              },
+              {
+                "code": "6-10",
+                "tr": 10,
+                "text": "Sinov muddatida ketganlar ulushi o‘lchanadimi?"
+              },
+              {
+                "code": "6-11",
+                "tr": 11,
+                "text": "Attestatsiyadan birinchi urinishda o‘tish ulushi o‘lchanadimi?"
+              },
+              {
+                "code": "6-12",
+                "tr": 12,
+                "text": "90 kunlik saqlanish o‘lchanadimi?"
+              },
+              {
+                "code": "6-13",
+                "tr": 13,
+                "text": "Ko‘rsatkichlar rahbarga muntazam hisobot qilinadimi?"
+              }
+            ]
+          }
+        ]
+      }
+    ];
+
+    // 2. STATE MANAGEMENT
+    const STORAGE_KEY_COMPANIES = 'ejm_audit_companies_v1';
+    const STORAGE_KEY_SCRIPT_URL = 'ejm_audit_apps_script_url_v1';
+
+    // GitHub'ga joylashdan oldin Apps Script Web App URL'ini shu yerga yozing —
+    // shunda saytni ochgan har bir qurilmada Google Sheets avtomatik ulangan bo'ladi.
+    const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx0z18SQfWUD_QBu_eNUBrRlw0ajRKyNYunQr10CHYD7LzTZDKzmAWkRD1Vkx_7BKXN/exec';
+
+    let companies = [];
+    let currentCompanyId = null;
+    let activeStageId = 'stage_1';
+    let questionFilter = 'ALL';
+
+    // Initialize Application
+    window.onload = function () {
+      try {
+        const savedCompanies = localStorage.getItem(STORAGE_KEY_COMPANIES);
+        if (savedCompanies) {
+          companies = JSON.parse(savedCompanies);
+        }
+      } catch (e) {
+        console.error('Storage load error:', e);
+      }
+
+      // Set default date in modal to today
+      const todayStr = new Date().toISOString().split('T')[0];
+      document.getElementById('inpAuditDate').value = todayStr;
+
+      updateConnectionStatusUI();
+      renderCompaniesList();
+      if (getAppsScriptUrl() && !getAuth()) showLogin();
+    };
+
+    // ---- Kirish (login/parol) ----
+    function getAuth() {
+      try { return JSON.parse(sessionStorage.getItem('ejm_auth') || 'null'); } catch (e) { return null; }
+    }
+    function showLogin(msg) {
+      const o = document.getElementById('loginOverlay');
+      o.classList.remove('hidden'); o.classList.add('flex');
+      const err = document.getElementById('loginError');
+      err.textContent = msg || ''; err.classList.toggle('hidden', !msg);
+      document.getElementById('loginInput').focus();
+    }
+    function hideLogin() {
+      const o = document.getElementById('loginOverlay');
+      o.classList.add('hidden'); o.classList.remove('flex');
+      document.getElementById('passwordInput').value = '';
+    }
+    function logout() {
+      try { sessionStorage.removeItem('ejm_auth'); } catch (e) {}
+      if (getAppsScriptUrl()) showLogin(); else showToast('Demo rejimda kirish talab qilinmaydi', 'info');
+    }
+    async function submitLogin(event) {
+      event.preventDefault();
+      const btn = document.getElementById('loginSubmitBtn');
+      const auth = {
+        login: document.getElementById('loginInput').value.trim(),
+        password: document.getElementById('passwordInput').value
+      };
+      btn.disabled = true; btn.textContent = 'Tekshirilmoqda...';
+      try {
+        const res = await postToBackend({ action: 'login' }, auth);
+        if (res.status === 'success') {
+          sessionStorage.setItem('ejm_auth', JSON.stringify(auth));
+          hideLogin();
+        } else {
+          showLogin(res.message === 'UNAUTHORIZED' ? 'Login yoki parol noto‘g‘ri' : (res.message || 'Xatolik'));
+        }
+      } catch (e) {
+        showLogin('Serverga ulanib bo‘lmadi. Internet va Apps Script URL ni tekshiring.');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Kirish';
+      }
+    }
+    async function postToBackend(body, authOverride) {
+      const response = await fetch(getAppsScriptUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(Object.assign({}, body, { auth: authOverride || getAuth() || {} }))
+      });
+      return response.json();
+    }
+    // Barcha so'rovlar shu orqali; parol eskirgan/noto'g'ri bo'lsa login oynasi qaytadi
+    async function apiCall(body) {
+      const res = await postToBackend(body);
+      if (res.status !== 'success' && res.message === 'UNAUTHORIZED') {
+        try { sessionStorage.removeItem('ejm_auth'); } catch (e) {}
+        showLogin('Qayta kiring');
+      }
+      return res;
+    }
+
+    function getAppsScriptUrl() {
+      let saved = '';
+      try { saved = localStorage.getItem(STORAGE_KEY_SCRIPT_URL) || ''; } catch (e) { /* storage yo'q */ }
+      return (saved || DEFAULT_APPS_SCRIPT_URL).trim();
+    }
+
+    function saveCompaniesToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY_COMPANIES, JSON.stringify(companies));
+      } catch (e) {
+        console.error('Storage save error:', e);
+      }
+    }
+
+    function updateConnectionStatusUI() {
+      const url = getAppsScriptUrl();
+      const badge = document.getElementById('connectionBadge');
+      const alertBanner = document.getElementById('setupAlertBanner');
+
+      if (url) {
+        badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200';
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Google Sheets ulangan';
+        if (alertBanner) alertBanner.classList.add('hidden');
+      } else {
+        badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200';
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Demo rejim';
+        if (alertBanner) alertBanner.classList.remove('hidden');
+      }
+    }
+
+    // 3. TOAST NOTIFICATIONS
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const colors = {
+        success: 'bg-slate-900 text-white border-emerald-500',
+        error: 'bg-rose-600 text-white border-rose-800',
+        info: 'bg-slate-800 text-white border-brand-500'
+      };
+      toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border-l-4 text-xs sm:text-sm font-medium transition-all duration-300 ${colors[type] || colors.info}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(8px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // 4. SCORING & CALCULATIONS (Matches Natija Sheet Logic: HA = 1, QISMAN = 0.5, YO'Q = 0)
+    function calculateCompanyStats(company) {
+      let totalQuestions = 0;
+      let totalAnswered = 0;
+      let totalPoints = 0;
+      let countHa = 0;
+      let countQisman = 0;
+      let countYoq = 0;
+
+      const stageStats = EJM_TEMPLATE.map(stage => {
+        let sTotal = 0;
+        let sAnswered = 0;
+        let sPoints = 0;
+
+        stage.blocks.forEach(block => {
+          block.questions.forEach(q => {
+            sTotal++;
+            totalQuestions++;
+            const ansObj = company.answers[q.code];
+            if (ansObj && ansObj.answer) {
+              sAnswered++;
+              totalAnswered++;
+              if (ansObj.answer === 'HA') {
+                sPoints += 1;
+                totalPoints += 1;
+                countHa++;
+              } else if (ansObj.answer === 'QISMAN') {
+                sPoints += 0.5;
+                totalPoints += 0.5;
+                countQisman++;
+              } else if (ansObj.answer === "YO'Q") {
+                countYoq++;
+              }
+            }
+          });
+        });
+
+        const scorePct = sTotal > 0 ? Math.round((sPoints / sTotal) * 100) : 0;
+        const completionPct = sTotal > 0 ? Math.round((sAnswered / sTotal) * 100) : 0;
+
+        return {
+          id: stage.id,
+          sheetName: stage.sheetName,
+          shortName: stage.shortName,
+          title: stage.title,
+          total: sTotal,
+          answered: sAnswered,
+          points: sPoints,
+          scorePct,
+          completionPct
+        };
+      });
+
+      const overallScorePct = totalQuestions > 0 ? Math.round((totalPoints / totalQuestions) * 100) : 0;
+      const overallCompletionPct = totalQuestions > 0 ? Math.round((totalAnswered / totalQuestions) * 100) : 0;
+
+      let levelLabel = "Boshlang'ich (Tizimsiz)";
+      if (overallScorePct >= 80) levelLabel = "Yuqori (Tizimlashgan)";
+      else if (overallScorePct >= 50) levelLabel = "O'rta (Rivojlanayotgan)";
+      else if (overallScorePct >= 25) levelLabel = "Past (Bazaviy)";
+
+      return {
+        totalQuestions,
+        totalAnswered,
+        totalPoints,
+        countHa,
+        countQisman,
+        countYoq,
+        overallScorePct,
+        overallCompletionPct,
+        levelLabel,
+        stageStats
+      };
+    }
+
+    // 5. DASHBOARD RENDERING & COMPANY CREATION
+    function renderCompaniesList() {
+      const grid = document.getElementById('companiesGrid');
+      const query = (document.getElementById('companySearchInput').value || '').toLowerCase().trim();
+
+      const filtered = companies.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.sector.toLowerCase().includes(query)
+      );
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full bg-white rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mx-auto">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <h3 class="text-base font-bold text-slate-900">Hozircha kompaniya qo'shilmagan</h3>
+            <p class="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
+              Yangi biznes diagnostikasini boshlash uchun yuqoridagi <b>"Kompaniya qo'shish"</b> tugmasini bosing.
+            </p>
+            <div class="pt-2">
+              <button onclick="openNewCompanyModal()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 transition">
+                + Birinchi kompaniyani qo'shish
+              </button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(company => {
+        const stats = calculateCompanyStats(company);
+        const isCompleted = company.status === 'completed';
+        const statusBadge = isCompleted
+          ? '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Yakunlangan</span>'
+          : '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">Jarayonda</span>';
+
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between gap-4">
+            <div class="space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <span class="text-[11px] font-semibold text-brand-600 uppercase tracking-wider">${escapeHtml(company.sector)}</span>
+                  <h3 class="text-lg font-extrabold text-slate-900 leading-snug mt-0.5">${escapeHtml(company.name)}</h3>
+                </div>
+                ${statusBadge}
+              </div>
+
+              <div class="text-xs text-slate-500 space-y-1">
+                <div>Auditor: <span class="font-semibold text-slate-700">${escapeHtml(company.auditor)}</span> • ${escapeHtml(company.auditDate)}</div>
+              </div>
+
+              <!-- Score Progress -->
+              <div class="pt-2 space-y-1.5">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-medium text-slate-600">EJM Tizim Darajasi: <b class="text-slate-900">${stats.overallScorePct}%</b></span>
+                  <span class="text-slate-500">To'ldirilgan: ${stats.overallCompletionPct}%</span>
+                </div>
+                <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-brand-600 rounded-full" style="width: ${stats.overallScorePct}%"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+              <button onclick="openWorkspace('${company.id}')"
+                      class="flex-1 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition text-center">
+                Diagnostikani ochish
+              </button>
+              <a href="${escapeHtml(company.spreadsheetUrl)}" target="_blank" rel="noopener noreferrer"
+                 title="Google Sheets jadvalini ochish"
+                 class="p-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+              <button onclick="deleteCompany('${company.id}')" title="O'chirish"
+                      class="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-200 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openNewCompanyModal() {
+      const modal = document.getElementById('newCompanyModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.getElementById('inpCompanyName').focus();
+    }
+
+    function closeNewCompanyModal() {
+      const modal = document.getElementById('newCompanyModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    async function handleCreateCompany(event) {
+      event.preventDefault();
+      const submitBtn = document.getElementById('createCompanySubmitBtn');
+      const originalBtnHtml = submitBtn.innerHTML;
+
+      const companyData = {
+        id: 'comp_' + Date.now(),
+        name: document.getElementById('inpCompanyName').value.trim(),
+        sector: document.getElementById('inpCompanySector').value,
+        employeeCount: document.getElementById('inpEmployeeCount').value,
+        auditor: document.getElementById('inpAuditorName').value.trim(),
+        auditDate: document.getElementById('inpAuditDate').value,
+        ownerContact: document.getElementById('inpOwnerContact').value.trim(),
+        notes: document.getElementById('inpNotes').value.trim(),
+        status: 'in_progress',
+        spreadsheetId: TEMPLATE_SPREADSHEET_ID,
+        spreadsheetUrl: TEMPLATE_SPREADSHEET_URL,
+        isCloned: false,
+        answers: {}
+      };
+
+      if (getAppsScriptUrl()) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>Google Sheets shabloni nusxalanmoqda...</span>';
+        const ok = await createSheetCopy(companyData);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnHtml;
+        showToast(ok ? 'Google Drive’da yangi jadval nusxasi yaratildi!' : 'Jadval nusxasi yaratilmadi. Keyinroq “Sheetsga saqlash” bosilganda qayta uriniladi.', ok ? 'success' : 'error');
+      } else {
+        showToast('Kompaniya qo‘shildi (Demo rejim). Google Sheets ulanmagan.', 'info');
+      }
+
+      companies.unshift(companyData);
+      saveCompaniesToStorage();
+      document.getElementById('newCompanyForm').reset();
+      document.getElementById('inpAuditDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('inpAuditorName').value = 'Nurali';
+
+      closeNewCompanyModal();
+      renderCompaniesList();
+      openWorkspace(companyData.id);
+    }
+
+    // Asosiy shablondan Drive'da yangi nusxa yaratadi (muvaffaqiyatli bo'lsa company'ni yangilaydi)
+    async function createSheetCopy(company) {
+      try {
+        const resJson = await apiCall({
+          action: 'create_company',
+          company: {
+            name: company.name,
+            auditor: company.auditor,
+            auditDate: company.auditDate
+          }
+        });
+        if (resJson.status === 'success' && resJson.spreadsheetId) {
+          company.spreadsheetId = resJson.spreadsheetId;
+          company.spreadsheetUrl = resJson.spreadsheetUrl;
+          company.isCloned = true;
+          saveCompaniesToStorage();
+          return true;
+        }
+        console.error('Apps Script:', resJson.message);
+        return false;
+      } catch (err) {
+        console.error(err);
+        return false;
+      }
+    }
+
+    function deleteCompany(id) {
+      companies = companies.filter(c => c.id !== id);
+      saveCompaniesToStorage();
+      renderCompaniesList();
+      showToast('Kompaniya ro‘yxatdan o‘chirildi', 'info');
+    }
+
+    // 6. WORKSPACE NAVIGATION & RENDERING
+    function goHome() {
+      currentCompanyId = null;
+      document.getElementById('workspaceView').classList.add('hidden');
+      document.getElementById('dashboardView').classList.remove('hidden');
+      renderCompaniesList();
+    }
+
+    function openWorkspace(companyId) {
+      const company = companies.find(c => c.id === companyId);
+      if (!company) return;
+
+      currentCompanyId = companyId;
+      activeStageId = EJM_TEMPLATE[0].id;
+      questionFilter = 'ALL';
+
+      document.getElementById('dashboardView').classList.add('hidden');
+      document.getElementById('workspaceView').classList.remove('hidden');
+
+      document.getElementById('wsCompanyName').textContent = company.name;
+      document.getElementById('wsCompanySector').textContent = company.sector;
+      document.getElementById('wsCompanyMeta').textContent = `Auditor: ${company.auditor} • Sana: ${company.auditDate}`;
+      document.getElementById('wsSheetDirectLink').href = company.spreadsheetUrl;
+
+      updateWorkspaceStatusBadge(company);
+      renderWorkspaceKPIs();
+      renderStageTabs();
+      renderQuestionsArea();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function updateWorkspaceStatusBadge(company) {
+      const badge = document.getElementById('wsStatusBadge');
+      if (company.status === 'completed') {
+        badge.className = 'px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
+        badge.textContent = 'Yakunlangan';
+      } else {
+        badge.className = 'px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200';
+        badge.textContent = 'Jarayonda';
+      }
+    }
+
+    function renderWorkspaceKPIs() {
+      const company = companies.find(c => c.id === currentCompanyId);
+      if (!company) return;
+
+      const stats = calculateCompanyStats(company);
+      document.getElementById('kpiOverallScore').textContent = stats.overallScorePct + '%';
+      document.getElementById('kpiOverallLabel').textContent = stats.levelLabel;
+      document.getElementById('kpiOverallBar').style.width = stats.overallScorePct + '%';
+
+      document.getElementById('kpiCompletionPct').textContent = stats.overallCompletionPct + '%';
+      document.getElementById('kpiAnsweredCount').textContent = `${stats.totalAnswered} / ${stats.totalQuestions} savol`;
+      document.getElementById('kpiCompletionBar').style.width = stats.overallCompletionPct + '%';
+
+      document.getElementById('kpiCountHa').textContent = stats.countHa;
+      document.getElementById('kpiCountQisman').textContent = stats.countQisman;
+      document.getElementById('kpiCountYoq').textContent = stats.countYoq;
+
+      const currentStageStat = stats.stageStats.find(s => s.id === activeStageId) || stats.stageStats[0];
+      document.getElementById('kpiStageScore').textContent = currentStageStat.scorePct + '%';
+      document.getElementById('kpiStageName').textContent = currentStageStat.shortName;
+      document.getElementById('kpiStageBar').style.width = currentStageStat.scorePct + '%';
+    }
+
+    function renderStageTabs() {
+      const company = companies.find(c => c.id === currentCompanyId);
+      if (!company) return;
+      const stats = calculateCompanyStats(company);
+      const container = document.getElementById('stageTabsContainer');
+
+      container.innerHTML = stats.stageStats.map(s => {
+        const isActive = s.id === activeStageId;
+        const activeClasses = isActive
+          ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
+          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50';
+        const pillClasses = isActive
+          ? 'bg-white/20 text-white'
+          : 'bg-slate-100 text-slate-600';
+
+        return `
+          <button onclick="selectStage('${s.id}')"
+                  class="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-bold transition ${activeClasses}">
+            <span>${s.shortName}</span>
+            <span class="px-2 py-0.5 rounded-md text-[11px] font-extrabold ${pillClasses}">${s.scorePct}%</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectStage(stageId) {
+      activeStageId = stageId;
+      renderWorkspaceKPIs();
+      renderStageTabs();
+      renderQuestionsArea();
+    }
+
+    function setQuestionFilter(filterType) {
+      questionFilter = filterType;
+      document.querySelectorAll('.q-filter-btn').forEach(btn => {
+        if (btn.dataset.filter === filterType) {
+          btn.className = 'q-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white';
+        } else {
+          btn.className = 'q-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200';
+        }
+      });
+      renderQuestionsArea();
+    }
+
+    function renderQuestionsArea() {
+      const company = companies.find(c => c.id === currentCompanyId);
+      if (!company) return;
+
+      const stage = EJM_TEMPLATE.find(s => s.id === activeStageId);
+      const container = document.getElementById('blocksContainer');
+      const searchQuery = (document.getElementById('questionSearchInput').value || '').toLowerCase().trim();
+
+      let html = '';
+
+      stage.blocks.forEach(block => {
+        const filteredQuestions = block.questions.filter(q => {
+          const ansObj = company.answers[q.code] || {};
+          if (searchQuery && !q.text.toLowerCase().includes(searchQuery) && !q.code.includes(searchQuery)) {
+            return false;
+          }
+          if (questionFilter === 'UNANSWERED' && ansObj.answer) return false;
+          if (questionFilter === 'GAPS' && ansObj.answer !== "YO'Q" && ansObj.answer !== 'QISMAN') return false;
+          return true;
+        });
+
+        if (filteredQuestions.length === 0) return;
+
+        // Calculate block score
+        let bPoints = 0;
+        block.questions.forEach(q => {
+          const a = company.answers[q.code]?.answer;
+          if (a === 'HA') bPoints += 1;
+          else if (a === 'QISMAN') bPoints += 0.5;
+        });
+        const blockPct = Math.round((bPoints / block.questions.length) * 100);
+
+        html += `
+          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3">
+              <h3 class="text-sm sm:text-base font-extrabold text-slate-900">${escapeHtml(block.title)}</h3>
+              <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white border border-slate-200 text-slate-700">
+                Blok natijasi: <span class="text-brand-600">${blockPct}%</span>
+              </span>
+            </div>
+
+            <div class="divide-y divide-slate-100">
+              ${filteredQuestions.map(q => renderQuestionRow(company, q)).join('')}
+            </div>
+          </div>
+        `;
+      });
+
+      if (!html) {
+        html = `
+          <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-sm text-slate-500">
+            Tanlangan filtr bo'yicha ushbu bo'limda savollar topilmadi.
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+    }
+
+    function renderQuestionRow(company, q) {
+      const data = company.answers[q.code] || {
+        answer: '',
+        link: '',
+        responsible: '',
+        practice: '',
+        video: '',
+        comment: ''
+      };
+
+      const haClass = data.answer === 'HA'
+        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+        : 'bg-white text-slate-700 border-slate-200 hover:bg-emerald-50';
+      const qismanClass = data.answer === 'QISMAN'
+        ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+        : 'bg-white text-slate-700 border-slate-200 hover:bg-amber-50';
+      const yoqClass = data.answer === "YO'Q"
+        ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+        : 'bg-white text-slate-700 border-slate-200 hover:bg-rose-50';
+
+      return `
+        <div class="p-4 sm:p-5 space-y-3.5 hover:bg-slate-50/50 transition">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div class="flex items-start gap-2.5 max-w-3xl">
+              <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-mono text-xs font-bold shrink-0 mt-0.5">${q.code}</span>
+              <p class="text-sm font-semibold text-slate-800 leading-snug">${escapeHtml(q.text)}</p>
+            </div>
+
+            <!-- HA / QISMAN / YO'Q Buttons -->
+            <div class="flex items-center gap-2 shrink-0">
+              <button type="button" onclick="setQuestionAnswer('${q.code}', 'HA')"
+                      class="answer-btn px-3.5 py-2 rounded-xl border text-xs font-extrabold ${haClass}">
+                HA (1)
+              </button>
+              <button type="button" onclick="setQuestionAnswer('${q.code}', 'QISMAN')"
+                      class="answer-btn px-3.5 py-2 rounded-xl border text-xs font-extrabold ${qismanClass}">
+                QISMAN (0.5)
+              </button>
+              <button type="button" onclick="setQuestionAnswer('${q.code}', &quot;YO'Q&quot;)"
+                      class="answer-btn px-3.5 py-2 rounded-xl border text-xs font-extrabold ${yoqClass}">
+                YO'Q (0)
+              </button>
+            </div>
+          </div>
+
+          <!-- Exact Spreadsheet Extra Columns (Instrument Link, Mas'ul shaxs, Amaliyot %, Video darslik, Izoh) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 pt-1">
+            <div class="lg:col-span-3">
+              <input type="text" value="${escapeHtml(data.link || '')}"
+                     onchange="updateQuestionField('${q.code}', 'link', this.value)"
+                     placeholder="Instrument Link (URL / Hujjat)"
+                     class="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+
+            <div class="lg:col-span-2">
+              <input type="text" value="${escapeHtml(data.responsible || '')}"
+                     onchange="updateQuestionField('${q.code}', 'responsible', this.value)"
+                     placeholder="Mas'ul shaxs"
+                     class="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+
+            <div class="lg:col-span-2">
+              <div class="relative">
+                <input type="number" min="0" max="100" value="${escapeHtml(data.practice || '')}"
+                       onchange="updateQuestionField('${q.code}', 'practice', this.value)"
+                       placeholder="Amaliyot %"
+                       class="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-500" />
+              </div>
+            </div>
+
+            <div class="lg:col-span-2">
+              <select onchange="updateQuestionField('${q.code}', 'video', this.value)"
+                      class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                <option value="" ${!data.video ? 'selected' : ''}>Video darslik?</option>
+                <option value="Ha" ${data.video === 'Ha' ? 'selected' : ''}>Video: Ha</option>
+                <option value="Yo'q" ${data.video === "Yo'q" ? 'selected' : ''}>Video: Yo'q</option>
+              </select>
+            </div>
+
+            <div class="lg:col-span-3">
+              <input type="text" value="${escapeHtml(data.comment || '')}"
+                     onchange="updateQuestionField('${q.code}', 'comment', this.value)"
+                     placeholder="Auditor izohi..."
+                     class="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function setQuestionAnswer(qCode, value) {
+      const company = companies.find(c => c.id === currentCompanyId);
+      if (!company) return;
+
+      if (!company.answers[qCode]) company.answers[qCode] = {};
+      company.answers[qCode].answer = value;
+
+      // Amaliyot % javobga mos avtomatik o'zgaradi (auditor qo'lda kiritmagan bo'lsa)
+      if (!company.answers[qCode].practiceManual) {
+        company.answers[qCode].practice = value === 'HA' ? '100' : value === 'QISMAN' ? '50' : '0';
+      }
+
+      saveCompaniesToStorage();
+      scheduleAutoSync();
+      renderWorkspaceKPIs();
+      renderStageTabs();
+      renderQuestionsArea();
+    }
+
+    function updateQuestionField(qCode, field, value) {
+      const company = companies.find(c => c.id === currentCompanyId);
+      if (!company) return;
+
+      if (!company.answers[qCode]) company.answers[qCode] = {};
+      company.answers[qCode][field] = value;
+      if (field === 'practice') company.answers[qCode].practiceManual = value !== '';
+      saveCompaniesToStorage();
+      scheduleAutoSync();
+    }
+
+    // 7. SYNC TO GOOGLE SHEETS & COMPLETION FLOW
+    let syncInFlight = false;
+    let syncQueued = false;
+    let autoSyncTimer = null;
+
+    // Javob o'zgargach 2.5 soniyadan so'ng jimgina Sheetsga yozadi
+    function scheduleAutoSync() {
+      if (!getAppsScriptUrl()) return;
+      clearTimeout(autoSyncTimer);
+      autoSyncTimer = setTimeout(() => syncAuditToSheets(false, true), 2500);
+    }
+
+    async function syncAuditToSheets(isCompleting = false, silent = false) {
+      const company = companies.find(c => c.id === currentCompanyId);
+      if (!company) return false;
+
+      const scriptUrl = getAppsScriptUrl();
+      const syncBtn = document.getElementById('syncNowBtn');
+      const origHtml = syncBtn.innerHTML;
+
+      if (!scriptUrl) {
+        if (!isCompleting && !silent) {
+          showToast('Lokal xotiraga saqlandi. Google Sheets ulanmagan.', 'info');
+        }
+        return false;
+      }
+
+      if (syncInFlight) {          // bir vaqtda ikkita yozuv bo'lmasin
+        syncQueued = true;
+        return false;
+      }
+      syncInFlight = true;
+      clearTimeout(autoSyncTimer);
+      if (!silent) {
+        syncBtn.disabled = true;
+        syncBtn.innerHTML = '<span>Saqlanmoqda...</span>';
+      }
+
+      try {
+        // Demo rejimda yaratilgan yoki nusxalanmay qolgan kompaniya uchun avval nusxa yaratamiz
+        if (!company.isCloned) {
+          const ok = await createSheetCopy(company);
+          if (!ok) {
+            if (!silent) showToast('Google Sheets nusxasini yaratib bo‘lmadi. URL va Apps Script ruxsatlarini tekshiring.', 'error');
+            return false;
+          }
+          document.getElementById('wsSheetDirectLink').href = company.spreadsheetUrl;
+        }
+
+        const stagesPayload = EJM_TEMPLATE.map(stage => {
+          const answersList = [];
+          stage.blocks.forEach(block => {
+            block.questions.forEach(q => {
+              const a = company.answers[q.code];
+              if (a) {
+                answersList.push({
+                  tr: q.tr,
+                  answer: a.answer || '',
+                  link: a.link || '',
+                  responsible: a.responsible || '',
+                  practice: a.practice === undefined ? '' : a.practice,
+                  video: a.video || '',
+                  comment: a.comment || ''
+                });
+              }
+            });
+          });
+          return { sheetName: stage.sheetName, answers: answersList };
+        });
+
+        const resJson = await apiCall({
+          action: 'sync_audit',
+          spreadsheetId: company.spreadsheetId,
+          stages: stagesPayload
+        });
+        if (resJson.status === 'success') {
+          if (!silent) showToast('Barcha javoblar Google Sheets jadvaliga yozildi!', 'success');
+          return true;
+        }
+        showToast('Sheetsga yozishda xatolik: ' + (resJson.message || ''), 'error');
+        return false;
+      } catch (err) {
+        console.error(err);
+        showToast('Tarmoq xatosi: Google Sheetsga ulanib bo‘lmadi.', 'error');
+        return false;
+      } finally {
+        syncInFlight = false;
+        if (!silent) {
+          syncBtn.disabled = false;
+          syncBtn.innerHTML = origHtml;
+        }
+        if (syncQueued) {
+          syncQueued = false;
+          scheduleAutoSync();
+        }
+      }
+    }
+
+    async function finishDiagnosis() {
+      const company = companies.find(c => c.id === currentCompanyId);
+      if (!company) return;
+
+      company.status = 'completed';
+      saveCompaniesToStorage();
+      updateWorkspaceStatusBadge(company);
+
+      const synced = await syncAuditToSheets(true);
+
+      const stats = calculateCompanyStats(company);
+      document.getElementById('compModalTitle').textContent = `${company.name} — Diagnostika Natijasi`;
+      document.getElementById('compOverallPct').textContent = stats.overallScorePct + '%';
+      document.getElementById('compOverallStatus').textContent = stats.levelLabel;
+      document.getElementById('compMetaSummary').textContent = `To'ldirilganlik: ${stats.overallCompletionPct}% (${stats.totalAnswered}/${stats.totalQuestions})`;
+
+      const syncBadge = document.getElementById('compSyncStatusBadge');
+      if (synced && company.isCloned) {
+        syncBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
+        syncBadge.textContent = '✓ Shaxsiy Google Sheets yangilandi';
+      } else if (company.isCloned) {
+        syncBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200';
+        syncBadge.textContent = '⚠ Sheetsga yozilmadi — “Sheetsga saqlash”ni qayta bosing';
+      } else {
+        syncBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200';
+        syncBadge.textContent = 'Demo rejim (Asosiy shablon havolasi)';
+      }
+
+      document.getElementById('compStagesTableBody').innerHTML = stats.stageStats.map(s => `
+        <tr>
+          <td class="py-2.5 px-3.5 font-semibold text-slate-800">${s.shortName}</td>
+          <td class="py-2.5 px-3.5 text-center text-slate-500">${s.answered}/${s.total} (${s.completionPct}%)</td>
+          <td class="py-2.5 px-3.5 text-right font-extrabold text-brand-600">${s.scorePct}%</td>
+        </tr>
+      `).join('');
+
+      document.getElementById('compSheetUrlInput').value = company.spreadsheetUrl;
+      document.getElementById('compOpenSheetBtn').href = company.spreadsheetUrl;
+
+      const modal = document.getElementById('completionModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeCompletionModal() {
+      const modal = document.getElementById('completionModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function copyTextFallback(text, successMsg) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast(successMsg, 'success');
+      } catch (err) {
+        showToast('Nusxalashda xatolik yuz berdi', 'error');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    function copySheetLink() {
+      const url = document.getElementById('compSheetUrlInput').value;
+      copyTextFallback(url, 'Google Sheets havolasi nusxalandi!');
+    }
+
+    function copyTelegramReport() {
+      const company = companies.find(c => c.id === currentCompanyId);
+      if (!company) return;
+      const stats = calculateCompanyStats(company);
+
+      const stageLines = stats.stageStats
+        .map(s => `• ${s.shortName}: ${s.scorePct}%`)
+        .join('\n');
+
+      const reportText = `📊 *EJM | AUDIT DIAGNOSTIKA NATIJALARI*
+
+🏢 *Kompaniya:* ${company.name}
+📅 *Sana:* ${company.auditDate}
+👤 *Auditor:* ${company.auditor}
+
+🎯 *Umumiy Tizim Darajasi:* *${stats.overallScorePct}%* (${stats.levelLabel})
+
+📈 *Bosqichlar kesimida:*
+${stageLines}
+
+🔗 *To'liq tahlil va tavsiyalar jadvali (Google Sheets):*
+${company.spreadsheetUrl}`;
+
+      copyTextFallback(reportText, 'Biznes egasi uchun tayyor hisobot matni nusxalandi!');
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>
