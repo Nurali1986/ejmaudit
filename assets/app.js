@@ -2343,6 +2343,11 @@ async function refreshRemoteCompanies() {
     const res = await apiCall({ action: 'list_companies' });
     if (res.status !== 'success') return;
     const remote = res.companies || [];
+    if (res.registryUrl) {
+      const link = document.getElementById('registryLink');
+      link.href = res.registryUrl;
+      link.classList.add('md:inline-flex');
+    }
     const removed = new Set(res.removed || []);
     const bySheet = new Map(companies.filter(c => c.isCloned).map(c => [c.spreadsheetId, c]));
     const pushList = [];
