@@ -74,7 +74,7 @@
     .pstuck circle:nth-child(odd){animation-delay:.5s}
     @keyframes pjam{from{transform:translateX(0)}to{transform:translateX(2.5px)}}
     /* EJM xaritasi */
-    .mapcol{min-width:215px}
+    .mapcol{min-width:0}
     .chev{clip-path:polygon(0 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,0 100%);}
     .mstep{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:5px 6px;border-radius:8px;font-size:12.5px;cursor:pointer;background:none;border:0}
     .mstep:hover{background:#f1f5f9}
@@ -114,10 +114,6 @@
 
       <!-- Header Right Actions -->
       <div class="flex items-center gap-2 sm:gap-3">
-        <nav class="flex items-center gap-1 p-1 rounded-xl bg-slate-100">
-          <button id="navCompaniesBtn" onclick="showView('companies')" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition">Kompaniyalar</button>
-          <button id="navStatsBtn" onclick="showView('stats')" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition">Dashboard</button>
-        </nav>
 
         <a href="https://docs.google.com/spreadsheets/d/1uHzu4aAAMdun3Ia4kjwrtHe4EnZHivk56rE4RVbJA7o/edit" target="_blank" rel="noopener noreferrer"
            class="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition">
@@ -191,15 +187,6 @@
     </section>
 
     <!-- ==================== VIEW 2: AUDIT WORKSPACE ==================== -->
-    <!-- ==================== VIEW 3: DASHBOARD (UMUMIY STATISTIKA) ==================== -->
-    <section id="statsView" class="hidden space-y-6">
-      <div>
-        <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Dashboard</h1>
-        <p class="text-sm text-slate-500">Barcha kompaniyalar bo'yicha umumiy audit natijalari</p>
-      </div>
-      <div id="statsContent" class="space-y-6"></div>
-    </section>
-
     <section id="workspaceView" class="hidden space-y-6">
       <!-- Top Breadcrumb & Company Action Bar -->
       <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-5">
@@ -297,12 +284,18 @@
         </div>
       </div>
 
-      <!-- Ish oynasi bo'limlari -->
-      <div class="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-slate-100 w-fit">
-        <button id="paneBtn_audit" onclick="setPane('audit')" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition">📋 Audit savollari</button>
-        <button id="paneBtn_bneck" onclick="setPane('bneck')" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition">🚧 Bottleneck</button>
-        <button id="paneBtn_map" onclick="setPane('map')" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition">🗺 EJM xaritasi (Xodim fabrikasi)</button>
+      <!-- Kompaniya navbari -->
+      <div class="sticky top-16 z-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 bg-white/95 backdrop-blur border-y border-slate-200 shadow-sm">
+        <div class="flex gap-1 overflow-x-auto no-scrollbar">
+          <button id="paneBtn_dash" onclick="setPane('dash')" class="shrink-0 px-4 sm:px-5 py-3.5 text-sm sm:text-[15px] font-bold border-b-4 transition">📊 Dashboard</button>
+          <button id="paneBtn_audit" onclick="setPane('audit')" class="shrink-0 px-4 sm:px-5 py-3.5 text-sm sm:text-[15px] font-bold border-b-4 transition">📋 Audit savollari</button>
+          <button id="paneBtn_bneck" onclick="setPane('bneck')" class="shrink-0 px-4 sm:px-5 py-3.5 text-sm sm:text-[15px] font-bold border-b-4 transition">🚧 Bottleneck</button>
+          <button id="paneBtn_map" onclick="setPane('map')" class="shrink-0 px-4 sm:px-5 py-3.5 text-sm sm:text-[15px] font-bold border-b-4 transition">🗺 EJM xaritasi</button>
+          <button id="paneBtn_steps" onclick="setPane('steps')" class="shrink-0 px-4 sm:px-5 py-3.5 text-sm sm:text-[15px] font-bold border-b-4 transition">🧭 EJM qadamlari</button>
+        </div>
       </div>
+
+      <div id="wsDashPane" class="hidden space-y-6"></div>
 
       <div id="wsAuditPane" class="space-y-6">
       <!-- 6 Stage Navigation Tabs -->
@@ -333,6 +326,7 @@
 
       <div id="wsBneckPane" class="hidden space-y-5"></div>
       <div id="wsMapPane" class="hidden space-y-5"></div>
+      <div id="wsStepsPane" class="hidden space-y-5"></div>
     </section>
 
   </main>
@@ -2841,129 +2835,9 @@
     function showView(view) {
       currentCompanyId = null;
       document.getElementById('workspaceView').classList.add('hidden');
-      document.getElementById('dashboardView').classList.toggle('hidden', view !== 'companies');
-      document.getElementById('statsView').classList.toggle('hidden', view !== 'stats');
-      const on = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition bg-white text-slate-900 shadow-sm';
-      const off = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition text-slate-600 hover:text-slate-900';
-      document.getElementById('navCompaniesBtn').className = view === 'companies' ? on : off;
-      document.getElementById('navStatsBtn').className = view === 'stats' ? on : off;
-      if (view === 'stats') renderStats(); else renderCompaniesList();
+      document.getElementById('dashboardView').classList.remove('hidden');
+      renderCompaniesList();
       window.scrollTo({ top: 0 });
-    }
-
-    // ---- DASHBOARD (umumiy statistika) ----
-    function scoreColor(pct) {
-      if (pct >= 80) return { bar: 'bg-emerald-500', text: 'text-emerald-600' };
-      if (pct >= 50) return { bar: 'bg-brand-600', text: 'text-brand-600' };
-      if (pct >= 25) return { bar: 'bg-amber-500', text: 'text-amber-600' };
-      return { bar: 'bg-rose-500', text: 'text-rose-600' };
-    }
-
-    function statBar(pct, label, extra, onclick) {
-      const c = scoreColor(pct);
-      return `
-        <div class="${onclick ? 'cursor-pointer hover:bg-slate-50 rounded-lg -mx-2 px-2 py-1' : 'py-1'}" ${onclick ? `onclick="${onclick}"` : ''}>
-          <div class="flex items-center justify-between gap-3 text-xs sm:text-sm">
-            <span class="font-semibold text-slate-800 truncate">${label}</span>
-            <span class="shrink-0"><b class="${c.text}">${pct}%</b>${extra ? `<span class="text-slate-400 ml-2">${extra}</span>` : ''}</span>
-          </div>
-          <div class="w-full h-2 bg-slate-100 rounded-full mt-1 overflow-hidden">
-            <div class="h-full ${c.bar} rounded-full" style="width:${pct}%"></div>
-          </div>
-        </div>`;
-    }
-
-    function renderStats() {
-      const root = document.getElementById('statsContent');
-      if (companies.length === 0) {
-        root.innerHTML = `<div class="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center text-sm text-slate-500">
-          Hozircha ma'lumot yo'q. Kompaniya qo'shib, audit o'tkazing — natijalar shu yerda ko'rinadi.</div>`;
-        return;
-      }
-
-      const all = companies.map(c => ({ c, s: calculateCompanyStats(c) }));
-      const started = all.filter(x => x.s.totalAnswered > 0);
-      const avg = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
-      const completed = companies.filter(c => c.status === 'completed').length;
-      const avgScore = avg(started.map(x => x.s.overallScorePct));
-      const avgCompletion = avg(all.map(x => x.s.overallCompletionPct));
-      const sum = k => all.reduce((a, x) => a + x.s[k], 0);
-      const ha = sum('countHa'), qisman = sum('countQisman'), yoq = sum('countYoq');
-      const answeredTotal = ha + qisman + yoq;
-      const pctOf = n => answeredTotal ? Math.round((n / answeredTotal) * 100) : 0;
-
-      // Bosqichlar bo'yicha o'rtacha
-      const stageRows = EJM_TEMPLATE.map((st, i) => {
-        const vals = all.filter(x => x.s.stageStats[i].answered > 0).map(x => x.s.stageStats[i].scorePct);
-        return statBar(avg(vals), escapeHtml(st.shortName), vals.length + ' ta kompaniya');
-      }).join('');
-
-      // Bloklar kesimi: eng past natijali (javob berilgan savollar bo'yicha)
-      const blockAgg = [];
-      EJM_TEMPLATE.forEach(st => st.blocks.forEach(b => {
-        let answered = 0, points = 0;
-        companies.forEach(c => b.questions.forEach(q => {
-          const a = c.answers[q.code] && c.answers[q.code].answer;
-          if (!a) return;
-          answered++;
-          points += a === 'HA' ? 1 : a === 'QISMAN' ? 0.5 : 0;
-        }));
-        if (answered > 0) blockAgg.push({ title: b.title, answered, pct: Math.round((points / answered) * 100) });
-      }));
-      blockAgg.sort((a, b) => a.pct - b.pct);
-      const weakRows = blockAgg.slice(0, 8).map(b => statBar(b.pct, escapeHtml(b.title), b.answered + ' javob')).join('')
-        || '<p class="text-xs text-slate-400">Javoblar hali kiritilmagan</p>';
-
-      // Kompaniyalar reytingi
-      const ranking = [...all].sort((a, b) => b.s.overallScorePct - a.s.overallScorePct)
-        .map(x => statBar(x.s.overallScorePct, escapeHtml(x.c.name),
-          (x.c.status === 'completed' ? 'yakunlangan' : 'jarayonda') + ' • ' + x.s.overallCompletionPct + "% to'ldirilgan",
-          `openWorkspace('${x.c.id}')`)).join('');
-
-      // Darajalar taqsimoti
-      const levels = ["Yuqori (Tizimlashgan)", "O'rta (Rivojlanayotgan)", "Past (Bazaviy)", "Boshlang'ich (Tizimsiz)"];
-      const levelCounts = levels.map(l => ({ l, n: started.filter(x => x.s.levelLabel === l).length }));
-
-      const kpi = (title, value, sub) => `
-        <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-          <div class="text-xs font-medium text-slate-500">${title}</div>
-          <div class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">${value}</div>
-          <div class="text-[11px] text-slate-400 mt-1">${sub}</div>
-        </div>`;
-      const card = (title, body) => `
-        <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-2">
-          <h3 class="text-sm font-bold text-slate-900 mb-2">${title}</h3>${body}</div>`;
-
-      root.innerHTML = `
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          ${kpi('Kompaniyalar', companies.length, completed + ' ta yakunlangan • ' + (companies.length - completed) + ' ta jarayonda')}
-          ${kpi("O'rtacha EJM darajasi", avgScore + '%', started.length + " ta kompaniya bo'yicha")}
-          ${kpi("O'rtacha to'ldirilganlik", avgCompletion + '%', 'barcha kompaniyalar')}
-          ${kpi('Jami javoblar', answeredTotal, 'HA ' + ha + ' • QISMAN ' + qisman + " • YO'Q " + yoq)}
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-          ${card("Bosqichlar bo'yicha o'rtacha natija", stageRows)}
-          ${card('Eng muammoli bloklar (eng past natija)', weakRows)}
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-          ${card('Kompaniyalar reytingi', ranking)}
-          ${card('Javoblar va darajalar taqsimoti', `
-            <div class="flex w-full h-4 rounded-full overflow-hidden bg-slate-100">
-              <div class="bg-emerald-500" style="width:${pctOf(ha)}%"></div>
-              <div class="bg-amber-400" style="width:${pctOf(qisman)}%"></div>
-              <div class="bg-rose-500" style="width:${pctOf(yoq)}%"></div>
-            </div>
-            <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 pb-3">
-              <span><b class="text-emerald-600">HA</b> ${pctOf(ha)}%</span>
-              <span><b class="text-amber-600">QISMAN</b> ${pctOf(qisman)}%</span>
-              <span><b class="text-rose-600">YO'Q</b> ${pctOf(yoq)}%</span>
-            </div>
-            <div class="space-y-1.5 pt-1 border-t border-slate-100">
-              ${levelCounts.map(x => `<div class="flex justify-between text-xs sm:text-sm"><span class="text-slate-700">${x.l}</span><b class="text-slate-900">${x.n} ta</b></div>`).join('')}
-            </div>`)}
-        </div>`;
     }
 
     function openWorkspace(companyId) {
@@ -2975,7 +2849,6 @@
       questionFilter = 'ALL';
 
       document.getElementById('dashboardView').classList.add('hidden');
-      document.getElementById('statsView').classList.add('hidden');
       document.getElementById('workspaceView').classList.remove('hidden');
 
       document.getElementById('wsCompanyName').textContent = company.name;
@@ -2987,7 +2860,7 @@
       renderWorkspaceKPIs();
       renderStageTabs();
       renderQuestionsArea();
-      setPane('audit');
+      setPane('dash');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -3509,18 +3382,21 @@ const EJM_RULES = [{"n":"№","title":"Qoida","text":"Mazmuni"},{"n":"1","title"
     // ---- bo'limlar almashtirgichi ----
     function setPane(pane) {
       wsPane = pane;
-      ['audit', 'bneck', 'map'].forEach(k => {
-        const pn = document.getElementById({ audit: 'wsAuditPane', bneck: 'wsBneckPane', map: 'wsMapPane' }[k]);
+      ['dash', 'audit', 'bneck', 'map', 'steps'].forEach(k => {
+        const pn = document.getElementById({ dash: 'wsDashPane', audit: 'wsAuditPane', bneck: 'wsBneckPane', map: 'wsMapPane', steps: 'wsStepsPane' }[k]);
         pn.classList.toggle('hidden', k !== pane);
-        document.getElementById('paneBtn_' + k).className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition ' +
-          (k === pane ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900');
+        document.getElementById('paneBtn_' + k).className = 'shrink-0 px-4 sm:px-5 py-3.5 text-sm sm:text-[15px] font-bold border-b-4 transition ' +
+          (k === pane ? 'border-brand-600 text-brand-700 bg-brand-50/60' : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50');
       });
+      if (pane !== 'audit') window.scrollTo({ top: 0 });
       refreshPane();
     }
     function refreshPane() {
       if (!curCompany()) return;
-      if (wsPane === 'bneck') renderBottleneck();
+      if (wsPane === 'dash') renderCompanyDashboard();
+      else if (wsPane === 'bneck') renderBottleneck();
       else if (wsPane === 'map') renderMap();
+      else if (wsPane === 'steps') renderSteps();
     }
 
     // ---- audit savoli ostidagi "qaysi qadamga tegishli" belgilar ----
@@ -3729,7 +3605,7 @@ const EJM_RULES = [{"n":"№","title":"Qoida","text":"Mazmuni"},{"n":"1","title"
           </div>
         </div>
         <div class="overflow-x-auto pb-3">
-          <div class="grid gap-3" style="grid-template-columns:repeat(6,minmax(215px,1fr));min-width:1330px">${cols}</div>
+          <div class="grid gap-3" style="grid-template-columns:repeat(6,minmax(180px,1fr));min-width:1140px">${cols}</div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600"><b>6. EJM boshqaruvi</b> (audit natijasi: <b style="color:${s6.answered ? pcolor(s6.pct) : '#94a3b8'}">${s6.answered ? s6.pct + '%' : '—'}</b>): lavozim paketlari versiyasi va yillik yangilanishi · pilot · samaradorlik ko‘rsatkichlari</div>
@@ -3866,6 +3742,233 @@ const EJM_RULES = [{"n":"№","title":"Qoida","text":"Mazmuni"},{"n":"1","title"
         const el = document.getElementById('q-' + code);
         if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('ring-2', 'ring-brand-500'); setTimeout(() => el.classList.remove('ring-2', 'ring-brand-500'), 2200); }
       }, 60);
+    }
+
+    // ==================== KOMPANIYA DASHBOARDI ====================
+    function scoreColor(pct) {
+      if (pct >= 80) return { bar: 'bg-emerald-500', text: 'text-emerald-600' };
+      if (pct >= 50) return { bar: 'bg-brand-600', text: 'text-brand-600' };
+      if (pct >= 25) return { bar: 'bg-amber-500', text: 'text-amber-600' };
+      return { bar: 'bg-rose-500', text: 'text-rose-600' };
+    }
+
+    function statBar(pct, label, extra, onclick) {
+      const c = scoreColor(pct);
+      return `
+        <div class="${onclick ? 'cursor-pointer hover:bg-slate-50 rounded-lg -mx-2 px-2 py-1' : 'py-1'}" ${onclick ? `onclick="${onclick}"` : ''}>
+          <div class="flex items-center justify-between gap-3 text-xs sm:text-sm">
+            <span class="font-semibold text-slate-800 truncate">${label}</span>
+            <span class="shrink-0"><b class="${c.text}">${pct}%</b>${extra ? `<span class="text-slate-400 ml-2">${extra}</span>` : ''}</span>
+          </div>
+          <div class="w-full h-2 bg-slate-100 rounded-full mt-1 overflow-hidden">
+            <div class="h-full ${c.bar} rounded-full" style="width:${pct}%"></div>
+          </div>
+        </div>`;
+    }
+
+    function openAuditStage(stageId, filter) {
+      setPane('audit');
+      questionFilter = filter || 'ALL';
+      selectStage(stageId);
+      if (typeof setQuestionFilter === 'function') setQuestionFilter(questionFilter);
+    }
+
+    function renderCompanyDashboard() {
+      const company = curCompany();
+      const pane = document.getElementById('wsDashPane');
+      if (!company) return;
+
+      const st = calculateCompanyStats(company);
+      const unanswered = st.totalQuestions - st.totalAnswered;
+      const pctOf = n => st.totalAnswered ? Math.round((n / st.totalAnswered) * 100) : 0;
+      const mapTotal = scoreOfCodes(company, EJM_STEPS.flatMap(x => x.qs));
+      const linked = EJM_STEPS.filter(x => x.qs.length);
+      const evaluated = linked.filter(x => stepScore(company, x).answered > 0).length;
+
+      // Bosqichlar (audit)
+      const stageRows = st.stageStats.map(s => statBar(s.scorePct, escapeHtml(s.shortName), `${s.answered}/${s.total} javob`,
+        `openAuditStage('${s.id}')`)).join('');
+
+      // Eng muammoli bloklar
+      const blocks = [];
+      EJM_TEMPLATE.forEach(stg => stg.blocks.forEach(b => {
+        const sc = scoreOfCodes(company, b.questions.map(q => q.code));
+        if (sc.answered) blocks.push({ stg, b, sc });
+      }));
+      blocks.sort((a, c) => a.sc.pct - c.sc.pct);
+      const weakBlocks = blocks.slice(0, 8).map(x => statBar(x.sc.pct, escapeHtml(x.b.title), `${x.sc.answered}/${x.sc.total}`,
+        `openAuditStage('${x.stg.id}', 'GAPS')`)).join('') || '<p class="text-xs text-slate-400">Javoblar hali kiritilmagan</p>';
+
+      // EJM xaritasi bosqichlari
+      const mapRows = MAP_STAGES.map(ms => {
+        const sc = stageMapScore(company, ms.id);
+        return statBar(sc.answered ? sc.pct : 0, escapeHtml(ms.name), sc.answered ? `${sc.answered}/${sc.total} javob` : 'javob yo‘q', `setPane('map')`);
+      }).join('');
+
+      // Eng muammoli qadamlar
+      const steps = linked.map(x => ({ x, sc: stepScore(company, x) })).filter(y => y.sc.answered).sort((a, c) => a.sc.pct - c.sc.pct);
+      const weakSteps = steps.slice(0, 8).map(y => statBar(y.sc.pct, escapeHtml(y.x.code + ' ' + y.x.name), `${y.sc.answered}/${y.sc.total}`,
+        `openStepModal('${y.x.code}')`)).join('') || '<p class="text-xs text-slate-400">Javoblar hali kiritilmagan</p>';
+
+      const kpi = (title, value, sub, color) => `
+        <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+          <div class="text-xs font-medium text-slate-500">${title}</div>
+          <div class="text-2xl sm:text-3xl font-extrabold mt-1" style="color:${color || '#0f172a'}">${value}</div>
+          <div class="text-[11px] text-slate-400 mt-1">${sub}</div>
+        </div>`;
+      const card = (title, body, hint) => `
+        <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-2">
+          <div class="flex items-baseline justify-between gap-2 mb-1"><h3 class="text-sm font-bold text-slate-900">${title}</h3>${hint ? `<span class="text-[11px] text-slate-400">${hint}</span>` : ''}</div>${body}</div>`;
+
+      pane.innerHTML = `
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          ${kpi('Umumiy EJM darajasi', st.overallScorePct + '%', st.levelLabel, pcolor(st.overallScorePct))}
+          ${kpi('To‘ldirilganlik', st.overallCompletionPct + '%', `${st.totalAnswered} / ${st.totalQuestions} savol`)}
+          ${kpi('EJM xaritasi natijasi', mapTotal.answered ? mapTotal.pct + '%' : '—', `${evaluated} / ${linked.length} qadam baholangan`, mapTotal.answered ? pcolor(mapTotal.pct) : '#94a3b8')}
+          ${kpi('Javoblar', st.totalAnswered, `HA ${st.countHa} • QISMAN ${st.countQisman} • YO'Q ${st.countYoq}`)}
+        </div>
+
+        ${unanswered > 0 ? `<div class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-sm text-amber-900">
+          <span><b>${unanswered} ta savol</b> hali javobsiz — natija to‘liq bo‘lishi uchun auditni davom ettiring.</span>
+          <button class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold" onclick="openAuditStage('stage_1','UNANSWERED')">Auditni davom ettirish →</button></div>` : ''}
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+          ${card('Audit bosqichlari bo‘yicha natija', stageRows, 'bosqichni bosing')}
+          ${card('EJM xaritasi bosqichlari', mapRows, 'xaritani ochish')}
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+          ${card('Eng muammoli bloklar', weakBlocks, 'eng past natija')}
+          ${card('Eng muammoli qadamlar (EJM xaritasi)', weakSteps, 'qadamni bosing')}
+        </div>
+
+        ${card('Javoblar taqsimoti', `
+          <div class="flex w-full h-4 rounded-full overflow-hidden bg-slate-100">
+            <div class="bg-emerald-500" style="width:${pctOf(st.countHa)}%"></div>
+            <div class="bg-amber-400" style="width:${pctOf(st.countQisman)}%"></div>
+            <div class="bg-rose-500" style="width:${pctOf(st.countYoq)}%"></div>
+          </div>
+          <div class="flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-600 pt-1">
+            <span><b class="text-emerald-600">HA</b> ${pctOf(st.countHa)}% (${st.countHa})</span>
+            <span><b class="text-amber-600">QISMAN</b> ${pctOf(st.countQisman)}% (${st.countQisman})</span>
+            <span><b class="text-rose-600">YO'Q</b> ${pctOf(st.countYoq)}% (${st.countYoq})</span>
+            <span class="text-slate-400">Javobsiz: ${unanswered}</span>
+          </div>`)}`;
+    }
+
+    // ==================== EJM QADAMLARI (uzluksiz vertikal xarita) ====================
+    const PHASE_COLORS = {
+      T: ['#E8A33D', '#12284C', '#D9453A', '#5B4AA3'],
+      '1': ['#2D6A4F', '#C8532B', '#2A7FBA', '#7A5C2E'],
+      '2': ['#E8A33D', '#12284C', '#D9453A'],
+      '3': ['#5B4AA3', '#2D6A4F', '#C8532B', '#2A7FBA'],
+      '4': ['#E8A33D', '#12284C', '#D9453A', '#5B4AA3', '#2D6A4F'],
+      '5': ['#E8A33D', '#12284C', '#D9453A', '#5B4AA3', '#2D6A4F']
+    };
+    let stepsOnlyProblems = false;
+
+    function toggleStepsProblems() { stepsOnlyProblems = !stepsOnlyProblems; renderSteps(); }
+    function jumpToStage(id) {
+      const el = document.getElementById('stg-' + id);
+      if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 175, behavior: 'smooth' });
+    }
+
+    function renderSteps() {
+      const company = curCompany();
+      const pane = document.getElementById('wsStepsPane');
+      if (!company) return;
+
+      const linked = EJM_STEPS.filter(x => x.qs.length);
+      const evaluated = linked.filter(x => stepScore(company, x).answered > 0).length;
+      const total = scoreOfCodes(company, EJM_STEPS.flatMap(x => x.qs));
+
+      const jump = MAP_STAGES.map(ms => {
+        const sc = stageMapScore(company, ms.id);
+        return `<button type="button" onclick="jumpToStage('${ms.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:opacity-90" style="background:${ms.color}">${escapeHtml(ms.short)}${sc.answered ? ` · ${sc.pct}%` : ''}</button>`;
+      }).join('');
+
+      const sections = MAP_STAGES.map(ms => {
+        const all = stepsOfStage(ms.id);
+        const palette = PHASE_COLORS[ms.id];
+        const phaseOrder = [];
+        all.forEach(x => { if (!phaseOrder.includes(x.phase)) phaseOrder.push(x.phase); });
+        const sc = stageMapScore(company, ms.id);
+        const mods = EJM_MODULES.filter(m => m.stage === ms.id && !m.code.startsWith('A-'));
+        const att = EJM_MODULES.find(m => m.stage === ms.id && m.code.startsWith('A-'));
+
+        let body = '';
+        let shown = 0;
+        phaseOrder.forEach((ph, pi) => {
+          const col = palette[pi % palette.length];
+          const rows = all.filter(x => x.phase === ph && (!stepsOnlyProblems || badQuestions(company, x.qs).length > 0));
+          if (!rows.length) return;
+          shown += rows.length;
+          body += `<div class="mt-5 mb-2 flex items-center gap-2"><span class="inline-flex items-center px-3 py-1 text-xs font-extrabold text-white chev pr-5" style="background:${col}">${escapeHtml(ph)}</span></div>`;
+          body += rows.map(x => {
+            const gnum = EJM_STEPS.indexOf(x) + 1;
+            const ss = stepScore(company, x);
+            const bad = badQuestions(company, x.qs).length;
+            return `
+              <div class="relative pl-14 pb-3">
+                <div class="absolute left-0 top-1 w-10 h-10 rounded-full flex items-center justify-center text-white font-extrabold text-sm shadow ring-4 ring-white z-[1]" style="background:${col}">${gnum}</div>
+                <button type="button" onclick="openStepModal('${x.code}')" class="w-full text-left bg-white rounded-xl border border-slate-200 hover:shadow-md hover:border-slate-300 transition p-3.5">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <div class="text-[11px] font-bold text-slate-400">${x.code} · ${escapeHtml(x.who || '')}</div>
+                      <div class="text-[15px] font-extrabold text-slate-900 leading-snug">${escapeHtml(x.name)}</div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1">${scorePill(ss)}<span class="text-[10px] text-slate-400">${ss.total ? `${ss.answered}/${ss.total} javob` : 'auditda savol yo‘q'}</span></div>
+                  </div>
+                  <p class="text-xs text-slate-600 mt-1.5 leading-relaxed">${escapeHtml(x.what || '')}</p>
+                  <div class="flex flex-wrap gap-x-4 gap-y-0.5 mt-2 text-[11px] text-slate-500">
+                    ${x.when ? `<span>⏱ ${escapeHtml(x.when)}</span>` : ''}${x.tool ? `<span>🧰 ${escapeHtml(x.tool)}</span>` : ''}
+                  </div>
+                  ${x.result ? `<div class="mt-2 text-[11px]"><b class="text-slate-500">Natija:</b> <span class="text-slate-700">${escapeHtml(x.result)}</span></div>` : ''}
+                  ${bad ? `<div class="mt-1.5 inline-block px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 text-[11px] font-bold">${bad} ta muammo</div>` : ''}
+                </button>
+              </div>`;
+          }).join('');
+        });
+        if (!shown) body = '<div class="text-sm text-slate-400 py-4">Muammoli qadam yo‘q</div>';
+
+        const modChips = mods.length ? `<div class="flex flex-wrap items-center gap-1.5 mt-2"><span class="text-[11px] font-bold text-slate-500">Modullar:</span>${mods.map(m =>
+          `<button type="button" onclick="openModuleModal('${m.code}')" class="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-[11px] font-semibold text-slate-700 hover:bg-slate-50">${m.code} ${escapeHtml(m.name)}</button>`).join('')}</div>` : '';
+        const attBlock = att ? `<button type="button" onclick="openModuleModal('${att.code}')" class="block w-full text-left rounded-xl p-3.5 text-white mt-1 hover:opacity-95" style="background:${ms.color}">
+            <div class="text-sm font-extrabold">🔒 Bosqich attestatsiyasi — ${escapeHtml(ms.short)}</div>
+            <div class="text-xs opacity-90 mt-0.5">${escapeHtml(att.pass || '')}</div></button>` : '';
+
+        return `
+          <section id="stg-${ms.id}" class="scroll-mt-40">
+            <div class="sticky z-10 chev text-white font-extrabold px-5 py-3 flex items-center justify-between gap-3" style="background:${ms.color};top:116px">
+              <span class="text-base sm:text-lg">${escapeHtml(ms.name)}</span>
+              <span class="flex items-center gap-2 pr-3">
+                <span class="hidden sm:inline text-[11px] font-semibold opacity-90">${escapeHtml(ms.when)}</span>
+                ${sc.answered ? `<span class="text-[11px] px-2 py-0.5 rounded-full bg-white font-extrabold" style="color:${pcolor(sc.pct)}">${sc.pct}%</span>` : ''}
+              </span>
+            </div>
+            ${modChips}
+            <div class="relative mt-1">
+              <div class="absolute top-0 bottom-0 border-l-2 border-dashed" style="left:19px;border-color:${ms.color}55"></div>
+              ${body}
+            </div>
+            ${attBlock}
+          </section>`;
+      }).join('<div class="h-6"></div>');
+
+      pane.innerHTML = `
+        <div class="flex flex-wrap items-end gap-3">
+          <div class="flex-1 min-w-[260px]">
+            <h2 class="text-2xl font-extrabold text-slate-900">🧭 EJM qadamlari · 67 qadam</h2>
+            <p class="text-sm text-slate-500">Lavozim paketidan alumnigacha — barcha qadamlar tartib raqami bilan, tepadan pastga. Qadam ustiga bossangiz, unga bog‘langan diagnostika savollari ochiladi.</p>
+          </div>
+          <div class="flex items-center gap-3 text-xs">
+            <span class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700">Baholangan: <b>${evaluated}</b> / ${linked.length}</span>
+            <span class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700">Natija: <b style="color:${total.answered ? pcolor(total.pct) : '#94a3b8'}">${total.answered ? total.pct + '%' : '—'}</b></span>
+            <button onclick="toggleStepsProblems()" class="px-3 py-1.5 rounded-xl font-semibold ${stepsOnlyProblems ? 'bg-rose-600 text-white' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}">Faqat muammoli</button>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2">${jump}</div>
+        <div class="max-w-3xl">${sections}</div>`;
     }
 
     function escapeHtml(str) {
