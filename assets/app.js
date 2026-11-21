@@ -1980,7 +1980,7 @@ const STORAGE_KEY_SCRIPT_URL = 'ejm_audit_apps_script_url_v1';
 
 // GitHub'ga joylashdan oldin Apps Script Web App URL'ini shu yerga yozing —
 // shunda saytni ochgan har bir qurilmada Google Sheets avtomatik ulangan bo'ladi.
-const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxFwfWdhNpMZhbZElH1nfXzWhBRlw8I6tdpqHgC7F7wTjDguu9JKy8iQqDDxobNJ0Ny/exec';
+const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzU3VFHV2s7WDAz5pSyZfxs_0-0KWdHzz5L_VQIYT8g5_ohz6371BPSP9KSb-8MIzAI/exec';
 
 let companies = [];
 let currentCompanyId = null;
@@ -2280,7 +2280,6 @@ async function handleCreateCompany(event) {
   saveCompaniesToStorage();
   document.getElementById('newCompanyForm').reset();
   document.getElementById('inpAuditDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('inpAuditorName').value = 'Nurali';
 
   closeNewCompanyModal();
   renderCompaniesList();
