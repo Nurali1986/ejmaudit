@@ -2063,7 +2063,7 @@ function showToast(message, type = 'info') {
     toast.style.opacity = '0';
     toast.style.transform = 'translateY(8px)';
     setTimeout(() => toast.remove(), 300);
-  }, 3500);
+  }, type === 'error' ? 10000 : 3500);
 }
 
 // 4. SCORING & CALCULATIONS (Matches Natija Sheet Logic: HA = 1, QISMAN = 0.5, YO'Q = 0)
@@ -2271,7 +2271,7 @@ async function handleCreateCompany(event) {
     const ok = await createSheetCopy(companyData);
     submitBtn.disabled = false;
     submitBtn.innerHTML = originalBtnHtml;
-    showToast(ok ? 'Google Drive’da yangi jadval nusxasi yaratildi!' : 'Jadval nusxasi yaratilmadi. Keyinroq “Sheetsga saqlash” bosilganda qayta uriniladi.', ok ? 'success' : 'error');
+    showToast(ok ? 'Google Drive’da yangi jadval nusxasi yaratildi!' : 'Jadval nusxasi yaratilmadi: ' + lastCopyError + '. “Sheetsga saqlash” bosilganda qayta uriniladi.', ok ? 'success' : 'error');
   } else {
     showToast('Kompaniya qo‘shildi (Demo rejim). Google Sheets ulanmagan.', 'info');
   }
@@ -2391,7 +2391,9 @@ async function refreshRemoteCompanies() {
 }
 
 // Asosiy shablondan Drive'da yangi nusxa yaratadi (muvaffaqiyatli bo'lsa company'ni yangilaydi)
+let lastCopyError = '';
 async function createSheetCopy(company) {
+  lastCopyError = '';
   try {
     const resJson = await apiCall({
       action: 'create_company',
@@ -2414,9 +2416,11 @@ async function createSheetCopy(company) {
       return true;
     }
     console.error('Apps Script:', resJson.message);
+    lastCopyError = resJson.message || 'Noma’lum xato';
     return false;
   } catch (err) {
     console.error(err);
+    lastCopyError = 'serverga ulanib bo‘lmadi (' + (err && err.message ? err.message : 'tarmoq xatosi') + ')';
     return false;
   }
 }
@@ -2791,7 +2795,7 @@ async function syncAuditToSheets(isCompleting = false, silent = false) {
     if (!company.isCloned) {
       const ok = await createSheetCopy(company);
       if (!ok) {
-        if (!silent) showToast('Google Sheets nusxasini yaratib bo‘lmadi. URL va Apps Script ruxsatlarini tekshiring.', 'error');
+        if (!silent) showToast('Google Sheets nusxasini yaratib bo‘lmadi: ' + lastCopyError, 'error');
         return false;
       }
       document.getElementById('wsSheetDirectLink').href = company.spreadsheetUrl;
