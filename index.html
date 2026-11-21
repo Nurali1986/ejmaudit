@@ -61,29 +61,6 @@
 </head>
 <body class="min-h-screen flex flex-col antialiased selection:bg-brand-100 selection:text-brand-900">
 
-  <!-- Login oynasi (parol Apps Script tomonida tekshiriladi) -->
-  <div id="loginOverlay" class="hidden fixed inset-0 z-[60] items-center justify-center bg-slate-100 p-4">
-    <form onsubmit="submitLogin(event)" class="bg-white rounded-2xl w-full max-w-sm shadow-2xl border border-slate-200 p-6 space-y-4">
-      <div>
-        <h2 class="text-xl font-extrabold text-slate-900">EJM | Audit</h2>
-        <p class="text-xs text-slate-500">Davom etish uchun tizimga kiring</p>
-      </div>
-      <div>
-        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Login</label>
-        <input type="text" id="loginInput" required autocomplete="username"
-               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-      </div>
-      <div>
-        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Parol</label>
-        <input type="password" id="passwordInput" required autocomplete="current-password"
-               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-      </div>
-      <p id="loginError" class="hidden text-xs font-semibold text-rose-600"></p>
-      <button type="submit" id="loginSubmitBtn"
-              class="w-full px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-sm transition">Kirish</button>
-    </form>
-  </div>
-
   <!-- Toast Notification Container -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
 
@@ -116,11 +93,6 @@
           </svg>
           Asosiy Shablon
         </a>
-
-        <button onclick="logout()" title="Tizimdan chiqish"
-                class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
-          <span>Chiqish</span>
-        </button>
 
         <button onclick="openNewCompanyModal()"
                 class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 shadow-sm transition">
@@ -2468,7 +2440,7 @@
 
     // GitHub'ga joylashdan oldin Apps Script Web App URL'ini shu yerga yozing —
     // shunda saytni ochgan har bir qurilmada Google Sheets avtomatik ulangan bo'ladi.
-    const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx0z18SQfWUD_QBu_eNUBrRlw0ajRKyNYunQr10CHYD7LzTZDKzmAWkRD1Vkx_7BKXN/exec';
+    const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby_KorVw4vPMkf76qTB4z3-Q5J7cHfymaBORUJL7IIJsFZbBLHTp_cXhmZI30lXQdFk/exec';
 
     let companies = [];
     let currentCompanyId = null;
@@ -2492,67 +2464,16 @@
 
       updateConnectionStatusUI();
       renderCompaniesList();
-      if (getAppsScriptUrl() && !getAuth()) showLogin();
     };
 
-    // ---- Kirish (login/parol) ----
-    function getAuth() {
-      try { return JSON.parse(sessionStorage.getItem('ejm_auth') || 'null'); } catch (e) { return null; }
-    }
-    function showLogin(msg) {
-      const o = document.getElementById('loginOverlay');
-      o.classList.remove('hidden'); o.classList.add('flex');
-      const err = document.getElementById('loginError');
-      err.textContent = msg || ''; err.classList.toggle('hidden', !msg);
-      document.getElementById('loginInput').focus();
-    }
-    function hideLogin() {
-      const o = document.getElementById('loginOverlay');
-      o.classList.add('hidden'); o.classList.remove('flex');
-      document.getElementById('passwordInput').value = '';
-    }
-    function logout() {
-      try { sessionStorage.removeItem('ejm_auth'); } catch (e) {}
-      if (getAppsScriptUrl()) showLogin(); else showToast('Demo rejimda kirish talab qilinmaydi', 'info');
-    }
-    async function submitLogin(event) {
-      event.preventDefault();
-      const btn = document.getElementById('loginSubmitBtn');
-      const auth = {
-        login: document.getElementById('loginInput').value.trim(),
-        password: document.getElementById('passwordInput').value
-      };
-      btn.disabled = true; btn.textContent = 'Tekshirilmoqda...';
-      try {
-        const res = await postToBackend({ action: 'login' }, auth);
-        if (res.status === 'success') {
-          sessionStorage.setItem('ejm_auth', JSON.stringify(auth));
-          hideLogin();
-        } else {
-          showLogin(res.message === 'UNAUTHORIZED' ? 'Login yoki parol noto‘g‘ri' : (res.message || 'Xatolik'));
-        }
-      } catch (e) {
-        showLogin('Serverga ulanib bo‘lmadi. Internet va Apps Script URL ni tekshiring.');
-      } finally {
-        btn.disabled = false; btn.textContent = 'Kirish';
-      }
-    }
-    async function postToBackend(body, authOverride) {
+    // ---- Backend bilan aloqa ----
+    async function apiCall(body) {
       const response = await fetch(getAppsScriptUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(Object.assign({}, body, { auth: authOverride || getAuth() || {} }))
+        body: JSON.stringify(body)
       });
       return response.json();
-    }
-    // Barcha so'rovlar shu orqali; parol eskirgan/noto'g'ri bo'lsa login oynasi qaytadi
-    async function apiCall(body) {
-      const res = await postToBackend(body);
-      if (res.status !== 'success' && res.message === 'UNAUTHORIZED') {
-        try { sessionStorage.removeItem('ejm_auth'); } catch (e) {}
-        showLogin('Qayta kiring');
-      }
-      return res;
     }
 
     function getAppsScriptUrl() {
