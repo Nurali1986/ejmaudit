@@ -2004,6 +2004,7 @@ window.onload = function () {
 
   updateConnectionStatusUI();
   showView('companies');
+  refreshRemoteCompanies();
 };
 
 // ---- Backend bilan aloqa ----
@@ -2286,15 +2287,119 @@ async function handleCreateCompany(event) {
   openWorkspace(companyData.id);
 }
 
+// ---- Kompaniyalarni backenddan olish (boshqa kompyuterda ham ko'rinishi uchun) ----
+const COMPANY_META_KEYS = ['name', 'sector', 'employeeCount', 'auditor', 'auditDate', 'ownerContact', 'notes', 'status'];
+
+function normalizeAnswer(a) {
+  const v = String(a || '').toUpperCase().replace(/[’‘`]/g, "'");
+  return v === 'HA' ? 'HA' : v === 'QISMAN' ? 'QISMAN' : v === "YO'Q" ? "YO'Q" : '';
+}
+
+// Jadvaldagi javoblarni company.answers ga yuklaydi (mahalliy o'zgartirish kutilayotgan bo'lsa, tegmaydi)
+async function hydrateFromSheet(company) {
+  if (!company.isCloned || !getAppsScriptUrl() || company.dirty) return false;
+  const rev = company.rev || 0;
+  let res;
+  try { res = await apiCall({ action: 'load_audit', spreadsheetId: company.spreadsheetId }); } catch (e) { return false; }
+  if (res.status !== 'success' || company.dirty || (company.rev || 0) !== rev) return false;
+
+  const answers = {};
+  (res.stages || []).forEach(st => {
+    const si = EJM_TEMPLATE.findIndex(x => x.sheetName === st.sheetName) + 1;
+    if (!si) return;
+    st.answers.forEach(a => {
+      const code = si + '-' + a.tr;
+      if (!QUESTION_BY_CODE[code]) return;
+      const ans = normalizeAnswer(a.answer);
+      const practice = a.practice === '' ? '' : String(a.practice);
+      const auto = ans === 'HA' ? '100' : ans === 'QISMAN' ? '50' : ans === "YO'Q" ? '0' : '';
+      answers[code] = {
+        answer: ans, link: a.link || '', responsible: a.responsible || '', practice,
+        video: a.video ? (normalizeAnswer(a.video) === 'HA' ? 'Ha' : "Yo'q") : '',
+        comment: a.comment || '', practiceManual: practice !== '' && practice !== auto
+      };
+    });
+  });
+  company.answers = answers;
+  company.needsLoad = false;
+  saveCompaniesToStorage();
+  return true;
+}
+
+// Mahalliy kompaniyaning ma'lumotlarini backendga yozadi (eski kompaniyalarni ro'yxatga qo'shish uchun ham)
+async function pushCompanyMeta(company) {
+  try {
+    const meta = { spreadsheetId: company.spreadsheetId, id: company.id };
+    COMPANY_META_KEYS.forEach(k => { meta[k] = company[k] || ''; });
+    await apiCall({ action: 'save_company', company: meta });
+  } catch (e) { console.error(e); }
+}
+
+let remoteRefreshBusy = false;
+async function refreshRemoteCompanies() {
+  if (!getAppsScriptUrl() || remoteRefreshBusy) return;
+  remoteRefreshBusy = true;
+  try {
+    const res = await apiCall({ action: 'list_companies' });
+    if (res.status !== 'success') return;
+    const remote = res.companies || [];
+    const removed = new Set(res.removed || []);
+    const bySheet = new Map(companies.filter(c => c.isCloned).map(c => [c.spreadsheetId, c]));
+    const pushList = [];
+    const remoteIds = new Set();
+
+    remote.forEach(r => {
+      remoteIds.add(r.spreadsheetId);
+      const loc = bySheet.get(r.spreadsheetId);
+      if (loc) {
+        if (r.rescued) pushList.push(loc);                 // backendda ma'lumot to'liq emas — mahalliydan to'ldiramiz
+        else if (!loc.dirty) COMPANY_META_KEYS.forEach(k => { if (r[k] !== undefined && r[k] !== '') loc[k] = r[k]; });
+        return;
+      }
+      companies.unshift({
+        id: r.id || ('sheet_' + r.spreadsheetId), name: r.name || 'Nomsiz kompaniya', sector: r.sector || 'Boshqa soha',
+        employeeCount: r.employeeCount || '', auditor: r.auditor || '', auditDate: r.auditDate || '',
+        ownerContact: r.ownerContact || '', notes: r.notes || '', status: r.status || 'in_progress',
+        spreadsheetId: r.spreadsheetId, spreadsheetUrl: r.spreadsheetUrl, isCloned: true, answers: {}, needsLoad: true
+      });
+    });
+
+    // boshqa kompyuterda o'chirilganlar
+    companies = companies.filter(c => !(c.isCloned && removed.has(c.spreadsheetId)));
+    // faqat shu kompyuterda bo'lgan (hali ro'yxatga tushmagan) nusxalangan kompaniyalar
+    companies.forEach(c => {
+      if (c.isCloned && c.spreadsheetId !== TEMPLATE_SPREADSHEET_ID && !remoteIds.has(c.spreadsheetId) && !removed.has(c.spreadsheetId)) pushList.push(c);
+    });
+    saveCompaniesToStorage();
+    if (!document.getElementById('dashboardView').classList.contains('hidden')) renderCompaniesList();
+
+    for (const c of pushList) await pushCompanyMeta(c);
+
+    // yangi kelgan kompaniyalarning javoblarini fonda yuklab, kartalarni yangilaymiz
+    for (const c of companies.filter(x => x.needsLoad)) {
+      if (await hydrateFromSheet(c) && !document.getElementById('dashboardView').classList.contains('hidden')) renderCompaniesList();
+    }
+  } catch (e) {
+    console.error('Ro‘yxatni yangilab bo‘lmadi:', e);
+  } finally {
+    remoteRefreshBusy = false;
+  }
+}
+
 // Asosiy shablondan Drive'da yangi nusxa yaratadi (muvaffaqiyatli bo'lsa company'ni yangilaydi)
 async function createSheetCopy(company) {
   try {
     const resJson = await apiCall({
       action: 'create_company',
       company: {
+        id: company.id,
         name: company.name,
+        sector: company.sector,
+        employeeCount: company.employeeCount,
         auditor: company.auditor,
-        auditDate: company.auditDate
+        auditDate: company.auditDate,
+        ownerContact: company.ownerContact,
+        notes: company.notes
       }
     });
     if (resJson.status === 'success' && resJson.spreadsheetId) {
@@ -2313,6 +2418,12 @@ async function createSheetCopy(company) {
 }
 
 function deleteCompany(id) {
+  const target = companies.find(c => c.id === id);
+  if (!target) return;
+  if (!confirm('“' + target.name + '” ro‘yxatdan o‘chirilsinmi? Boshqa kompyuterlarda ham ko‘rinmay qoladi (Google Drive’dagi jadval o‘chirilmaydi).')) return;
+  if (target.isCloned && getAppsScriptUrl()) {
+    apiCall({ action: 'delete_company', spreadsheetId: target.spreadsheetId }).catch(() => {});
+  }
   companies = companies.filter(c => c.id !== id);
   saveCompaniesToStorage();
   renderCompaniesList();
@@ -2322,6 +2433,7 @@ function deleteCompany(id) {
 // 6. WORKSPACE NAVIGATION & RENDERING
 function goHome() {
   showView('companies');
+  refreshRemoteCompanies();
 }
 
 function showView(view) {
@@ -2354,6 +2466,15 @@ function openWorkspace(companyId) {
   renderQuestionsArea();
   setPane('dash');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Boshqa kompyuterda kiritilgan javoblarni Google Sheets'dan olib keladi
+  if (company.isCloned && getAppsScriptUrl()) {
+    hydrateFromSheet(company).then(changed => {
+      if (changed && currentCompanyId === company.id) {
+        renderWorkspaceKPIs(); renderStageTabs(); renderQuestionsArea(); refreshPane();
+      }
+    });
+  }
 }
 
 function updateWorkspaceStatusBadge(company) {
@@ -2586,9 +2707,15 @@ function renderQuestionRow(company, q) {
   `;
 }
 
+function markDirty(company) {
+  company.dirty = true;
+  company.rev = (company.rev || 0) + 1;
+}
+
 function setQuestionAnswer(qCode, value) {
   const company = companies.find(c => c.id === currentCompanyId);
   if (!company) return;
+  markDirty(company);
 
   if (!company.answers[qCode]) company.answers[qCode] = {};
   company.answers[qCode].answer = value;
@@ -2608,6 +2735,7 @@ function setQuestionAnswer(qCode, value) {
 function updateQuestionField(qCode, field, value) {
   const company = companies.find(c => c.id === currentCompanyId);
   if (!company) return;
+  markDirty(company);
 
   if (!company.answers[qCode]) company.answers[qCode] = {};
   company.answers[qCode][field] = value;
@@ -2686,12 +2814,15 @@ async function syncAuditToSheets(isCompleting = false, silent = false) {
       return { sheetName: stage.sheetName, answers: answersList };
     });
 
+    const revAtStart = company.rev || 0;
     const resJson = await apiCall({
       action: 'sync_audit',
       spreadsheetId: company.spreadsheetId,
+      status: company.status,
       stages: stagesPayload
     });
     if (resJson.status === 'success') {
+      if ((company.rev || 0) === revAtStart) { company.dirty = false; saveCompaniesToStorage(); }
       if (!silent) showToast('Barcha javoblar Google Sheets jadvaliga yozildi!', 'success');
       return true;
     }
