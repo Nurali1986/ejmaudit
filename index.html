@@ -57,9 +57,37 @@
     .answer-btn:active {
       transform: scale(0.96);
     }
+
+    /* Bottleneck quvur */
+    .pipe{display:flex;align-items:stretch;overflow-x:auto;padding:4px 2px 10px}
+    .pipe-in,.pipe-out{align-self:center;font-size:11.5px;font-weight:800;color:#64748b;white-space:nowrap;padding:0 8px;margin-top:6px}
+    .pseg{flex:0 0 132px;width:132px;background:none;border:0;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:stretch;border-radius:10px;transition:background .15s}
+    .pseg:hover,.pseg.on{background:#eff6ff}
+    .pseg-t{height:44px;display:flex;align-items:flex-end;justify-content:center;gap:4px;text-align:center;font-size:11.5px;font-weight:700;line-height:1.2;padding:0 5px 5px;color:#0f172a}
+    .pseg svg{display:block}
+    .pseg-b{display:flex;flex-direction:column;align-items:center;padding:4px 4px 8px;min-height:50px}
+    .pseg-b b{font-size:15px}
+    .pseg-b small{font-size:10.5px;color:#64748b;text-align:center;line-height:1.2}
+    .pflow{animation:pflow linear infinite}
+    @keyframes pflow{to{stroke-dashoffset:-32}}
+    .pstuck circle{animation:pjam 1.4s ease-in-out infinite alternate}
+    .pstuck circle:nth-child(odd){animation-delay:.5s}
+    @keyframes pjam{from{transform:translateX(0)}to{transform:translateX(2.5px)}}
+    /* EJM xaritasi */
+    .mapcol{min-width:215px}
+    .chev{clip-path:polygon(0 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,0 100%);}
+    .mstep{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:5px 6px;border-radius:8px;font-size:12.5px;cursor:pointer;background:none;border:0}
+    .mstep:hover{background:#f1f5f9}
   </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased selection:bg-brand-100 selection:text-brand-900">
+
+  <!-- Qadam / modul tafsilot oynasi -->
+  <div id="stepModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto" onclick="if(event.target===this)closeStepModal()">
+    <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden my-auto">
+      <div id="stepModalBody"></div>
+    </div>
+  </div>
 
   <!-- Toast Notification Container -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
@@ -86,6 +114,11 @@
 
       <!-- Header Right Actions -->
       <div class="flex items-center gap-2 sm:gap-3">
+        <nav class="flex items-center gap-1 p-1 rounded-xl bg-slate-100">
+          <button id="navCompaniesBtn" onclick="showView('companies')" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition">Kompaniyalar</button>
+          <button id="navStatsBtn" onclick="showView('stats')" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition">Dashboard</button>
+        </nav>
+
         <a href="https://docs.google.com/spreadsheets/d/1uHzu4aAAMdun3Ia4kjwrtHe4EnZHivk56rE4RVbJA7o/edit" target="_blank" rel="noopener noreferrer"
            class="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition">
           <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,6 +191,15 @@
     </section>
 
     <!-- ==================== VIEW 2: AUDIT WORKSPACE ==================== -->
+    <!-- ==================== VIEW 3: DASHBOARD (UMUMIY STATISTIKA) ==================== -->
+    <section id="statsView" class="hidden space-y-6">
+      <div>
+        <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Dashboard</h1>
+        <p class="text-sm text-slate-500">Barcha kompaniyalar bo'yicha umumiy audit natijalari</p>
+      </div>
+      <div id="statsContent" class="space-y-6"></div>
+    </section>
+
     <section id="workspaceView" class="hidden space-y-6">
       <!-- Top Breadcrumb & Company Action Bar -->
       <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-5">
@@ -255,6 +297,14 @@
         </div>
       </div>
 
+      <!-- Ish oynasi bo'limlari -->
+      <div class="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-slate-100 w-fit">
+        <button id="paneBtn_audit" onclick="setPane('audit')" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition">📋 Audit savollari</button>
+        <button id="paneBtn_bneck" onclick="setPane('bneck')" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition">🚧 Bottleneck</button>
+        <button id="paneBtn_map" onclick="setPane('map')" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition">🗺 EJM xaritasi (Xodim fabrikasi)</button>
+      </div>
+
+      <div id="wsAuditPane" class="space-y-6">
       <!-- 6 Stage Navigation Tabs -->
       <div class="flex overflow-x-auto gap-2 pb-1 no-scrollbar" id="stageTabsContainer">
         <!-- Populated dynamically -->
@@ -279,6 +329,10 @@
       <div id="blocksContainer" class="space-y-5">
         <!-- Populated dynamically -->
       </div>
+      </div>
+
+      <div id="wsBneckPane" class="hidden space-y-5"></div>
+      <div id="wsMapPane" class="hidden space-y-5"></div>
     </section>
 
   </main>
@@ -2463,7 +2517,7 @@
       document.getElementById('inpAuditDate').value = todayStr;
 
       updateConnectionStatusUI();
-      renderCompaniesList();
+      showView('companies');
     };
 
     // ---- Backend bilan aloqa ----
@@ -2781,10 +2835,135 @@
 
     // 6. WORKSPACE NAVIGATION & RENDERING
     function goHome() {
+      showView('companies');
+    }
+
+    function showView(view) {
       currentCompanyId = null;
       document.getElementById('workspaceView').classList.add('hidden');
-      document.getElementById('dashboardView').classList.remove('hidden');
-      renderCompaniesList();
+      document.getElementById('dashboardView').classList.toggle('hidden', view !== 'companies');
+      document.getElementById('statsView').classList.toggle('hidden', view !== 'stats');
+      const on = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition bg-white text-slate-900 shadow-sm';
+      const off = 'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition text-slate-600 hover:text-slate-900';
+      document.getElementById('navCompaniesBtn').className = view === 'companies' ? on : off;
+      document.getElementById('navStatsBtn').className = view === 'stats' ? on : off;
+      if (view === 'stats') renderStats(); else renderCompaniesList();
+      window.scrollTo({ top: 0 });
+    }
+
+    // ---- DASHBOARD (umumiy statistika) ----
+    function scoreColor(pct) {
+      if (pct >= 80) return { bar: 'bg-emerald-500', text: 'text-emerald-600' };
+      if (pct >= 50) return { bar: 'bg-brand-600', text: 'text-brand-600' };
+      if (pct >= 25) return { bar: 'bg-amber-500', text: 'text-amber-600' };
+      return { bar: 'bg-rose-500', text: 'text-rose-600' };
+    }
+
+    function statBar(pct, label, extra, onclick) {
+      const c = scoreColor(pct);
+      return `
+        <div class="${onclick ? 'cursor-pointer hover:bg-slate-50 rounded-lg -mx-2 px-2 py-1' : 'py-1'}" ${onclick ? `onclick="${onclick}"` : ''}>
+          <div class="flex items-center justify-between gap-3 text-xs sm:text-sm">
+            <span class="font-semibold text-slate-800 truncate">${label}</span>
+            <span class="shrink-0"><b class="${c.text}">${pct}%</b>${extra ? `<span class="text-slate-400 ml-2">${extra}</span>` : ''}</span>
+          </div>
+          <div class="w-full h-2 bg-slate-100 rounded-full mt-1 overflow-hidden">
+            <div class="h-full ${c.bar} rounded-full" style="width:${pct}%"></div>
+          </div>
+        </div>`;
+    }
+
+    function renderStats() {
+      const root = document.getElementById('statsContent');
+      if (companies.length === 0) {
+        root.innerHTML = `<div class="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center text-sm text-slate-500">
+          Hozircha ma'lumot yo'q. Kompaniya qo'shib, audit o'tkazing — natijalar shu yerda ko'rinadi.</div>`;
+        return;
+      }
+
+      const all = companies.map(c => ({ c, s: calculateCompanyStats(c) }));
+      const started = all.filter(x => x.s.totalAnswered > 0);
+      const avg = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+      const completed = companies.filter(c => c.status === 'completed').length;
+      const avgScore = avg(started.map(x => x.s.overallScorePct));
+      const avgCompletion = avg(all.map(x => x.s.overallCompletionPct));
+      const sum = k => all.reduce((a, x) => a + x.s[k], 0);
+      const ha = sum('countHa'), qisman = sum('countQisman'), yoq = sum('countYoq');
+      const answeredTotal = ha + qisman + yoq;
+      const pctOf = n => answeredTotal ? Math.round((n / answeredTotal) * 100) : 0;
+
+      // Bosqichlar bo'yicha o'rtacha
+      const stageRows = EJM_TEMPLATE.map((st, i) => {
+        const vals = all.filter(x => x.s.stageStats[i].answered > 0).map(x => x.s.stageStats[i].scorePct);
+        return statBar(avg(vals), escapeHtml(st.shortName), vals.length + ' ta kompaniya');
+      }).join('');
+
+      // Bloklar kesimi: eng past natijali (javob berilgan savollar bo'yicha)
+      const blockAgg = [];
+      EJM_TEMPLATE.forEach(st => st.blocks.forEach(b => {
+        let answered = 0, points = 0;
+        companies.forEach(c => b.questions.forEach(q => {
+          const a = c.answers[q.code] && c.answers[q.code].answer;
+          if (!a) return;
+          answered++;
+          points += a === 'HA' ? 1 : a === 'QISMAN' ? 0.5 : 0;
+        }));
+        if (answered > 0) blockAgg.push({ title: b.title, answered, pct: Math.round((points / answered) * 100) });
+      }));
+      blockAgg.sort((a, b) => a.pct - b.pct);
+      const weakRows = blockAgg.slice(0, 8).map(b => statBar(b.pct, escapeHtml(b.title), b.answered + ' javob')).join('')
+        || '<p class="text-xs text-slate-400">Javoblar hali kiritilmagan</p>';
+
+      // Kompaniyalar reytingi
+      const ranking = [...all].sort((a, b) => b.s.overallScorePct - a.s.overallScorePct)
+        .map(x => statBar(x.s.overallScorePct, escapeHtml(x.c.name),
+          (x.c.status === 'completed' ? 'yakunlangan' : 'jarayonda') + ' • ' + x.s.overallCompletionPct + "% to'ldirilgan",
+          `openWorkspace('${x.c.id}')`)).join('');
+
+      // Darajalar taqsimoti
+      const levels = ["Yuqori (Tizimlashgan)", "O'rta (Rivojlanayotgan)", "Past (Bazaviy)", "Boshlang'ich (Tizimsiz)"];
+      const levelCounts = levels.map(l => ({ l, n: started.filter(x => x.s.levelLabel === l).length }));
+
+      const kpi = (title, value, sub) => `
+        <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+          <div class="text-xs font-medium text-slate-500">${title}</div>
+          <div class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">${value}</div>
+          <div class="text-[11px] text-slate-400 mt-1">${sub}</div>
+        </div>`;
+      const card = (title, body) => `
+        <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-2">
+          <h3 class="text-sm font-bold text-slate-900 mb-2">${title}</h3>${body}</div>`;
+
+      root.innerHTML = `
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          ${kpi('Kompaniyalar', companies.length, completed + ' ta yakunlangan • ' + (companies.length - completed) + ' ta jarayonda')}
+          ${kpi("O'rtacha EJM darajasi", avgScore + '%', started.length + " ta kompaniya bo'yicha")}
+          ${kpi("O'rtacha to'ldirilganlik", avgCompletion + '%', 'barcha kompaniyalar')}
+          ${kpi('Jami javoblar', answeredTotal, 'HA ' + ha + ' • QISMAN ' + qisman + " • YO'Q " + yoq)}
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+          ${card("Bosqichlar bo'yicha o'rtacha natija", stageRows)}
+          ${card('Eng muammoli bloklar (eng past natija)', weakRows)}
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+          ${card('Kompaniyalar reytingi', ranking)}
+          ${card('Javoblar va darajalar taqsimoti', `
+            <div class="flex w-full h-4 rounded-full overflow-hidden bg-slate-100">
+              <div class="bg-emerald-500" style="width:${pctOf(ha)}%"></div>
+              <div class="bg-amber-400" style="width:${pctOf(qisman)}%"></div>
+              <div class="bg-rose-500" style="width:${pctOf(yoq)}%"></div>
+            </div>
+            <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 pb-3">
+              <span><b class="text-emerald-600">HA</b> ${pctOf(ha)}%</span>
+              <span><b class="text-amber-600">QISMAN</b> ${pctOf(qisman)}%</span>
+              <span><b class="text-rose-600">YO'Q</b> ${pctOf(yoq)}%</span>
+            </div>
+            <div class="space-y-1.5 pt-1 border-t border-slate-100">
+              ${levelCounts.map(x => `<div class="flex justify-between text-xs sm:text-sm"><span class="text-slate-700">${x.l}</span><b class="text-slate-900">${x.n} ta</b></div>`).join('')}
+            </div>`)}
+        </div>`;
     }
 
     function openWorkspace(companyId) {
@@ -2796,6 +2975,7 @@
       questionFilter = 'ALL';
 
       document.getElementById('dashboardView').classList.add('hidden');
+      document.getElementById('statsView').classList.add('hidden');
       document.getElementById('workspaceView').classList.remove('hidden');
 
       document.getElementById('wsCompanyName').textContent = company.name;
@@ -2807,6 +2987,7 @@
       renderWorkspaceKPIs();
       renderStageTabs();
       renderQuestionsArea();
+      setPane('audit');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -2968,11 +3149,14 @@
         : 'bg-white text-slate-700 border-slate-200 hover:bg-rose-50';
 
       return `
-        <div class="p-4 sm:p-5 space-y-3.5 hover:bg-slate-50/50 transition">
+        <div id="q-${q.code}" class="p-4 sm:p-5 space-y-3.5 hover:bg-slate-50/50 transition">
           <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div class="flex items-start gap-2.5 max-w-3xl">
               <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-mono text-xs font-bold shrink-0 mt-0.5">${q.code}</span>
-              <p class="text-sm font-semibold text-slate-800 leading-snug">${escapeHtml(q.text)}</p>
+              <div>
+                <p class="text-sm font-semibold text-slate-800 leading-snug">${escapeHtml(q.text)}</p>
+                ${stepChipsFor(q.code)}
+              </div>
             </div>
 
             <!-- HA / QISMAN / YO'Q Buttons -->
@@ -3260,6 +3444,428 @@ ${stageLines}
 ${company.spreadsheetUrl}`;
 
       copyTextFallback(reportText, 'Biznes egasi uchun tayyor hisobot matni nusxalandi!');
+    }
+
+
+    // ==================== EJM XARITASI + BOTTLENECK ====================
+    // 67 qadam (Xodim fabrikasi) va modullar — "EJM _ Professional tizim" jadvalidan.
+    // Har qadam "qs" orqali audit savollariga bog'langan (savol kodi: bosqich-T/r).
+const EJM_STEPS = [{"code":"T.01","stage":"T","phase":"Lavozim asosi","name":"Lavozim profilini yozish","what":"Lavozim maqsadi, vazifalari, vakolati, bo‘ysunishi va kutilgan natijalarini bir hujjatda belgilash","who":"Rahbar + HR","when":"Yollashdan oldin, yiliga 1 marta yangilanadi","tool":"Lavozim profili shabloni","result":"Tasdiqlangan lavozim profili","criterion":"Rahbar imzolagan, barcha bandlar to‘ldirilgan","qs":["1-1","1-5","3-16"],"qnote":"","mapNo":"3","module":"Lavozim paketi"},{"code":"T.02","stage":"T","phase":"Lavozim asosi","name":"Ideal xodim portretini tuzish","what":"Lavozim uchun kerakli bilim, ko‘nikma va shaxsiy kompetensiyalarni aniqlash","who":"Rahbar + HR","when":"Yollashdan oldin","tool":"Portret shabloni, kuchli xodim intervyusi","result":"Portret: 5–8 ta mezon","criterion":"Har bir mezon intervyuda tekshiriladigan savolga ega","qs":["1-15","1-16","2-9"],"qnote":"","mapNo":"2","module":"Lavozim paketi"},{"code":"T.03","stage":"T","phase":"Lavozim asosi","name":"Ishlar ro‘yxati va xronometraj","what":"Kuchli xodimning kunlik, haftalik va oylik ishlarini va har biriga ketadigan vaqtni yozib olish","who":"HR + kuchli xodim","when":"Yollashdan oldin","tool":"Diagnostika jadvali, xronometraj","result":"Ishlar ro‘yxati, vaqt bilan","criterion":"Ish vaqtining kamida 80% qamrab olingan","qs":["3-19"],"qnote":"","mapNo":"1","module":"Lavozim paketi"},{"code":"T.04","stage":"T","phase":"Bilim bazasi","name":"SOP va standartlar","what":"Har bir asosiy vazifa uchun bajarish tartibi, mas’ul, muddat va sifat mezonini yozish","who":"HR + kuchli xodim","when":"Yollashdan oldin","tool":"SOP shabloni","result":"Asosiy vazifalar bo‘yicha SOP to‘plami","criterion":"Yangi xodim SOP bo‘yicha vazifani yordamsiz bajara oladi","qs":["3-20","3-34","2-25"],"qnote":"","mapNo":"Yangi","module":"Lavozim paketi"},{"code":"T.05","stage":"T","phase":"Bilim bazasi","name":"Video darsliklar","what":"Lavozim vazifalari, platformalar va mahsulot bo‘yicha video darslar yozish","who":"Kuchli xodim + HR","when":"Yollashdan oldin","tool":"Video, LMS yoki Telegram kanal","result":"Modullarga ajratilgan darslar","criterion":"Har bir SOP uchun dars bor","qs":["2-13","2-17","3-34"],"qnote":"","mapNo":"4","module":"Lavozim paketi"},{"code":"T.06","stage":"T","phase":"Bilim bazasi","name":"Test va topshiriqlar banki","what":"Har modul uchun test, amaliy topshiriq va baholash mezonini tayyorlash","who":"HR + Rahbar","when":"Yollashdan oldin","tool":"Test platformasi, topshiriq kartalari","result":"Test va topshiriqlar banki","criterion":"Har topshiriqda o‘tish bali belgilangan","qs":["2-26","2-28","3-49","3-53","1-75"],"qnote":"","mapNo":"5","module":"Lavozim paketi"},{"code":"T.07","stage":"T","phase":"Natija tizimi","name":"KPI kartasi","what":"Lavozim KPIlari, hisoblash formulasi va bonusga bog‘lanishini belgilash","who":"Rahbar","when":"Yollashdan oldin","tool":"KPI kartasi","result":"3–5 ta KPI, formulasi bilan","criterion":"KPI biznes maqsadiga bog‘langan, formula aniq","qs":["4-1","4-3","4-6","4-44"],"qnote":"","mapNo":"22","module":"Lavozim paketi"},{"code":"T.08","stage":"T","phase":"Natija tizimi","name":"Karyera xaritasi","what":"Junior, Middle va Senior darajalari hamda o‘tish mezonlarini belgilash","who":"Rahbar + HR","when":"Yollashdan oldin","tool":"Karyera xaritasi","result":"Darajalar va mezonlar","criterion":"Har daraja uchun o‘lchanadigan mezon bor","qs":["4-25","4-26","4-28"],"qnote":"","mapNo":"23","module":"Lavozim paketi"},{"code":"T.09","stage":"T","phase":"Nazorat","name":"Checklistlar","what":"Pre-boarding, On-boarding va Handover checklistlarini lavozimga moslash","who":"HR","when":"Yollashdan oldin","tool":"Checklist shablonlari","result":"3 ta checklist","criterion":"Har bandda mas’ul va muddat bor","qs":["2-7","3-8","5-10"],"qnote":"","mapNo":"7","module":"Lavozim paketi"},{"code":"T.10","stage":"T","phase":"Nazorat","name":"Skriptlar","what":"Birinchi qo‘ng‘iroq va intervyu skriptlarini lavozimga moslash","who":"HR","when":"Yollashdan oldin","tool":"Skript shabloni","result":"Screening va intervyu skripti","criterion":"Savollar portret mezonlariga bog‘langan","qs":["1-47","1-59","1-60"],"qnote":"","mapNo":"6","module":"Lavozim paketi"},{"code":"1.01","stage":"1","phase":"Jalb qilish","name":"Vakansiyani joylash","what":"Portret asosida e’lon yozib, tanlangan kanallarga joylash","who":"HR","when":"1–3 kun","tool":"Vakansiya shabloni, kanallar ro‘yxati","result":"Kanallar bo‘yicha nomzodlar oqimi","criterion":"Har nomzodning manbasi qayd etilgan","qs":["1-2","1-21","1-23","1-29"],"qnote":"","mapNo":"8","module":"Hiring"},{"code":"1.02","stage":"1","phase":"Filtrlash","name":"Post yoki topshiriq orqali filtr","what":"E’londa kichik topshiriq berib, motivatsiyasi past nomzodlarni ajratish","who":"HR","when":"Doimiy","tool":"Filtr topshirig‘i","result":"Topshiriqni bajargan nomzodlar","criterion":"Topshiriq mezon bo‘yicha baholangan","qs":["1-29","1-30"],"qnote":"","mapNo":"9","module":"Hiring"},{"code":"1.03","stage":"1","phase":"Filtrlash","name":"Rezyume filtri","what":"Rezyumeni portret mezonlari bilan solishtirish","who":"HR","when":"Kelgan kuni","tool":"Portret, filtr jadvali","result":"Qisqa ro‘yxat","criterion":"Har nomzodga qaror va sabab yozilgan","qs":["1-49","1-50"],"qnote":"","mapNo":"10","module":"Hiring"},{"code":"1.04","stage":"1","phase":"Filtrlash","name":"Nomzodlar bazasi","what":"Mos nomzodlarni bazaga kiritish, zaxirani saqlash","who":"HR","when":"Doimiy","tool":"Nomzodlar bazasi (Sheets yoki CRM)","result":"Talent pool","criterion":"Baza yangilangan, holatlar to‘g‘ri","qs":["1-44","1-45"],"qnote":"","mapNo":"11","module":"Hiring"},{"code":"1.05","stage":"1","phase":"Saralash","name":"Telefon screening","what":"Skript bo‘yicha qisqa qo‘ng‘iroq: tajriba, maosh kutuvi, jadval","who":"HR","when":"Filtrdan keyin 1 kun","tool":"Screening skripti","result":"Intervyuga taklif qilinganlar","criterion":"Natija bazaga yozilgan","qs":["1-46","1-52","1-57"],"qnote":"","mapNo":"12","module":"Hiring"},{"code":"1.06","stage":"1","phase":"Saralash","name":"Strukturali intervyu","what":"Standart savollar bilan intervyu, ball qo‘yish; lavozim, KPI va karyera xaritasini ko‘rsatish","who":"HR + Rahbar","when":"1 hafta ichida","tool":"Intervyu skripti, baholash varag‘i","result":"Har nomzod bo‘yicha ball va xulosa","criterion":"Kamida 2 baholovchi, ball yozilgan","qs":["1-59","1-60","1-62","1-72","1-73"],"qnote":"","mapNo":"13, 23","module":"Hiring"},{"code":"1.07","stage":"1","phase":"Saralash","name":"Amaliy sinov","what":"Real ishga yaqin topshiriq yoki jamoaviy o‘yin orqali ko‘nikmani tekshirish","who":"Rahbar","when":"Intervyudan keyin","tool":"Test banki, jamoaviy o‘yin","result":"Amaliy natija bahosi","criterion":"Mezon bo‘yicha baholangan","qs":["1-75","1-76","1-79","1-80"],"qnote":"","mapNo":"15","module":"Hiring"},{"code":"1.08","stage":"1","phase":"Qaror","name":"Offer va maosh muzokarasi","what":"Maosh, bonus, sinov muddati shartlarini kelishib, yozma offer berish","who":"Rahbar + HR","when":"Qarordan keyin 1–2 kun","tool":"Offer shabloni","result":"Qabul qilingan offer","criterion":"Shartlar yozma, ikki tomon tasdiqlagan","qs":["1-64","1-74"],"qnote":"","mapNo":"14","module":"Hiring"},{"code":"1.09","stage":"1","phase":"Qaror","name":"Rad etilganlarga javob","what":"Har bir nomzodga javob va qisqa feedback berish, bazada holatni yangilash","who":"HR","when":"Qarordan keyin 2 kun ichida","tool":"Javob shabloni","result":"Javobsiz nomzod qolmaydi","criterion":"100% nomzodga javob berilgan","qs":["1-58","1-89"],"qnote":"","mapNo":"Yangi","module":"Hiring"},{"code":"2.01","stage":"2","phase":"Rasmiylashtirish","name":"Hujjatlar va sinov shartlari","what":"Shartnoma, hujjatlar; sinov muddati va uning maqsadlarini yozma berish","who":"HR","when":"Offerdan keyin 1–2 kun","tool":"Shartnoma, sinov maqsadlari varag‘i","result":"Imzolangan hujjatlar","criterion":"Sinov maqsadlari o‘lchanadigan","qs":["2-1","2-2","3-21"],"qnote":"","mapNo":"16","module":"Jarayon (HR)"},{"code":"2.02","stage":"2","phase":"Rasmiylashtirish","name":"Mentor biriktirish","what":"Yangi xodimga mentor tayinlash va uning vazifalarini tushuntirish","who":"Rahbar","when":"1-kundan oldin","tool":"Mentor vazifalari ro‘yxati","result":"Tayinlangan mentor","criterion":"Mentor xodim bilan 1-kungacha bog‘langan","qs":["2-4","3-5","3-6"],"qnote":"","mapNo":"17","module":"Jarayon (HR)"},{"code":"2.03","stage":"2","phase":"Tayyorlov","name":"Xush kelibsiz xabari","what":"1-kun rejasi, manzil, vaqt, kiyinish qoidasi va kim kutib olishini yuborish","who":"HR","when":"1-kundan 2–3 kun oldin","tool":"Xabar shabloni","result":"Xodim 1-kunni aniq biladi","criterion":"Xabar yuborilgan va o‘qilgan","qs":["2-6"],"qnote":"","mapNo":"Yangi","module":"Jarayon (HR)"},{"code":"2.04","stage":"2","phase":"Tayyorlov","name":"Pre-learning","what":"Kompaniya, mahsulot va lavozim bo‘yicha boshlang‘ich video darslar","who":"Xodim (HR nazorati)","when":"1-kungacha","tool":"Video darslar, bilim bazasi","result":"Asosiy modullar ko‘rilgan","criterion":"Barcha majburiy darslar ko‘rilgan","qs":["2-8","2-11","2-21","2-22"],"qnote":"","mapNo":"4","module":"M-PB1…M-PB4"},{"code":"2.05","stage":"2","phase":"Tayyorlov","name":"Kirish testi","what":"Pre-learning bo‘yicha bilimni tekshirish","who":"HR","when":"1-kungacha","tool":"Test banki","result":"Test natijasi","criterion":"Minimal o‘tish bali to‘plangan","qs":["2-26","2-28","2-29"],"qnote":"","mapNo":"Yangi","module":"A-PB"},{"code":"2.06","stage":"2","phase":"Tayyorlov","name":"Ish joyi va accesslar","what":"Ish joyi, jihoz, korporativ profil va accountlar, forma tayyor turadi","who":"Admin/IT + HR","when":"1-kundan oldin","tool":"Access ro‘yxati","result":"Xodim 1-kunda ishga tayyor","criterion":"Hammasi 1-kun ertalabgacha tayyor","qs":[],"qnote":"Yangi (auditda yo‘q)","mapNo":"26, 27, 30","module":"Jarayon (Admin/IT)"},{"code":"2.07","stage":"2","phase":"Tayyorlov","name":"Jamoaga e’lon","what":"Jamoaga yangi xodim kimligi va qachon kelishini xabar qilish","who":"Rahbar","when":"1-kundan 1 kun oldin","tool":"E’lon shabloni","result":"Jamoa yangi xodimni kutadi","criterion":"E’lon qilingan","qs":["3-26"],"qnote":"","mapNo":"Yangi","module":"Jarayon (Rahbar)"},{"code":"2.08","stage":"2","phase":"Yakun","name":"Pre-boardingni yopish","what":"Checklist tekshiriladi, xodim On-boardingga o‘tkaziladi","who":"HR","when":"1-kun ertalab","tool":"Pre-boarding checklist","result":"Yopilgan checklist","criterion":"Barcha bandlar bajarilgan","qs":["2-7","2-32","2-33"],"qnote":"","mapNo":"Yangi","module":"A-PB"},{"code":"3.01","stage":"3","phase":"1-hafta","name":"Birinchi kun","what":"Kutib olish, ish joyi, jamoa va menejerlar bilan tanishtirish","who":"Rahbar + Mentor","when":"1-kun","tool":"1-kun rejasi","result":"Xodim jamoani va ish joyini biladi","criterion":"Reja bo‘yicha o‘tgan, xodim feedbacki ijobiy","qs":["3-26","3-27"],"qnote":"","mapNo":"24, 31","module":"M-OB1"},{"code":"3.02","stage":"3","phase":"1-hafta","name":"Lavozimga kiritish","what":"Lavozim maqsadi, vazifalar, vakolat, KPI va sinov maqsadlarini tushuntirish","who":"Rahbar","when":"1–3 kun","tool":"Lavozim profili, KPI kartasi","result":"Xodim o‘zidan nima kutilishini biladi","criterion":"Xodim KPI va sinov maqsadlarini o‘z so‘zi bilan ayta oladi","qs":["3-13","3-15","3-21","3-22","3-69","3-70"],"qnote":"","mapNo":"22","module":"M-OB5"},{"code":"3.03","stage":"3","phase":"1-hafta","name":"Kompaniya qoidalari","what":"Qadriyatlar, ichki kommunikatsiya, murojaat tartibi, imkoniyatlar","who":"HR","when":"1-hafta","tool":"Xodim qo‘llanmasi","result":"Xodim qoidalarni biladi","criterion":"Qisqa test o‘tgan","qs":["3-23","3-24","3-29","3-30"],"qnote":"","mapNo":"25","module":"M-OB2"},{"code":"3.04","stage":"3","phase":"1-hafta","name":"Platforma va instrumentlar","what":"Ishda ishlatiladigan tizimlarni amalda o‘rgatish","who":"Mentor","when":"1–2 hafta","tool":"Video darslar, yo‘riqnomalar","result":"Xodim tizimlarda mustaqil ishlaydi","criterion":"Amaliy topshiriq bajarilgan","qs":["3-33","3-35","3-39","3-40"],"qnote":"","mapNo":"Yangi","module":"M-OB3"},{"code":"3.05","stage":"3","phase":"O‘qitish","name":"Modullar bo‘yicha o‘qitish","what":"Har modul: dars, keyin real ishga asoslangan topshiriq","who":"Mentor","when":"Sinov davomida","tool":"Video darslar, test banki","result":"Bajarilgan modul topshiriqlari","criterion":"Har modul topshirig‘i o‘tish balidan yuqori","qs":["3-49","3-50","3-53"],"qnote":"","mapNo":"18","module":"M-OB4"},{"code":"3.06","stage":"3","phase":"O‘qitish","name":"Mentor bilan real ish","what":"Kuzatish, keyin birgalikda bajarish, keyin mustaqil bajarish","who":"Mentor","when":"Sinov davomida","tool":"SOP, kuzatuv varag‘i","result":"Xodim bosqichma-bosqich mustaqil ishlaydi","criterion":"Asosiy vazifalar mustaqil bajarilgan","qs":["3-51","3-58"],"qnote":"","mapNo":"28","module":"M-OB4"},{"code":"3.07","stage":"3","phase":"O‘qitish","name":"Haftalik feedback","what":"Mentor yoki rahbar xatolar va yutuqlar bo‘yicha qisqa suhbat o‘tkazadi","who":"Mentor + Rahbar","when":"Har hafta","tool":"Feedback varag‘i","result":"Yozib borilgan feedback","criterion":"Har hafta yozuv bor","qs":["3-55","3-56","3-73"],"qnote":"","mapNo":"29","module":"M-OB4"},{"code":"3.08","stage":"3","phase":"Nazorat nuqtalari","name":"30-kun tekshiruvi","what":"Bilim testi va amaliy tekshiruv","who":"Rahbar","when":"30-kun","tool":"Test banki","result":"Oraliq natija","criterion":"O‘tish bali, kamchiliklarga qayta o‘qitish rejasi","qs":["3-59","3-60","3-57"],"qnote":"","mapNo":"19","module":"M-OB6"},{"code":"3.09","stage":"3","phase":"Nazorat nuqtalari","name":"60-kun: dastlabki KPI","what":"Xodimning real KPI natijalarini tahlil qilish","who":"Rahbar","when":"60-kun","tool":"KPI kartasi","result":"KPI tahlili","criterion":"Natija rejaga nisbatan o‘lchangan","qs":["3-72","3-74","3-75"],"qnote":"","mapNo":"Yangi","module":"M-OB6"},{"code":"3.10","stage":"3","phase":"Yakun","name":"Yakuniy assessment","what":"O‘rgatilgan bilimlar ro‘yxati bo‘yicha nazariy va amaliy imtihon","who":"Rahbar + HR","when":"Sinov oxiri","tool":"Yakuniy test, amaliy topshiriq","result":"Assessment natijasi","criterion":"Belgilangan o‘tish mezoni bajarilgan","qs":["3-63","3-64","3-65"],"qnote":"","mapNo":"21","module":"A-OB"},{"code":"3.11","stage":"3","phase":"Yakun","name":"Sinovni yakunlash suhbati","what":"Qaror: qabul qilish, sinovni uzaytirish yoki xayrlashish","who":"Rahbar","when":"Sinov oxiri","tool":"Qaror varag‘i","result":"Yozma qaror","criterion":"Qaror assessment va KPI ga asoslangan","qs":["3-66","3-79","3-80"],"qnote":"","mapNo":"20","module":"A-OB"},{"code":"3.12","stage":"3","phase":"Yakun","name":"Rivojlanish rejasi (IDP)","what":"Karyera xaritasida joyini belgilash, keyingi 3–6 oy uchun maqsadlar","who":"Rahbar + Xodim","when":"Sinovdan keyin 1 hafta","tool":"Karyera xaritasi, IDP shabloni","result":"Imzolangan IDP","criterion":"Maqsadlar o‘lchanadigan va muddatli","qs":["3-67","3-68","3-81"],"qnote":"","mapNo":"23","module":"M-DV2"},{"code":"3.13","stage":"3","phase":"Yakun","name":"On-boarding feedbacki","what":"Xodimdan moslashuv tajribasi haqida so‘rov olish va dasturni yangilash","who":"HR","when":"Sinovdan keyin","tool":"So‘rovnoma","result":"Feedback va o‘zgarishlar ro‘yxati","criterion":"Natijalar tahlil qilinib, dastur yangilangan","qs":["3-83","3-84","3-86"],"qnote":"","mapNo":"Yangi","module":"Xodim bahosi"},{"code":"4.01","stage":"4","phase":"Natija","name":"Oylik KPI hisobi","what":"KPI hisoblanadi va xodim bilan birga ko‘rib chiqiladi","who":"Rahbar","when":"Har oy","tool":"KPI kartasi","result":"Oylik KPI hisoboti","criterion":"Xodim natijasini biladi va tasdiqlaydi","qs":["4-4","4-5","4-14"],"qnote":"","mapNo":"28","module":"M-DV1"},{"code":"4.02","stage":"4","phase":"Natija","name":"1:1 suhbat","what":"Rahbar bilan oylik suhbat: natija, to‘siqlar, ehtiyojlar","who":"Rahbar","when":"Har oy","tool":"1:1 shabloni","result":"Yozilgan kelishuvlar","criterion":"Har oy o‘tkazilgan, yozuv bor","qs":["4-17","4-18","4-19","4-20"],"qnote":"","mapNo":"32","module":"M-DV1"},{"code":"4.03","stage":"4","phase":"Natija","name":"Past natija bo‘yicha reja","what":"KPI past bo‘lsa sabab tahlili va yaxshilash rejasi","who":"Rahbar","when":"Kerak bo‘lganda","tool":"Development Plan shabloni","result":"Yaxshilash rejasi","criterion":"Keyingi oyda natija o‘sgan","qs":["4-15","4-16"],"qnote":"","mapNo":"Yangi","module":"M-DV1"},{"code":"4.04","stage":"4","phase":"E’tirof","name":"E’tirof va mukofot","what":"Yaxshi natijani jamoa oldida tan olish, mezon bo‘yicha mukofotlash","who":"Rahbar + HR","when":"Har oy, chorak","tool":"Mukofot nizomi","result":"Mukofotlangan xodimlar","criterion":"Mezon oldindan e’lon qilingan","qs":["4-45","4-46","4-47"],"qnote":"","mapNo":"33, 30","module":"M-DV4"},{"code":"4.05","stage":"4","phase":"Rivojlanish","name":"Chorak maqsadlari","what":"IDP asosida chorak maqsadlari va keyingi qadamni belgilash","who":"Rahbar + Xodim","when":"Har chorak","tool":"IDP","result":"Chorak maqsadlari","criterion":"Maqsadlar o‘lchanadigan","qs":["4-31","4-32"],"qnote":"","mapNo":"34, 35, 36","module":"M-DV2"},{"code":"4.06","stage":"4","phase":"Rivojlanish","name":"O‘qish va treninglar","what":"Ichki video darslar, tashqi kurslar","who":"Xodim (HR nazorati)","when":"IDP bo‘yicha","tool":"Bilim bazasi, kurslar","result":"Tugatilgan treninglar","criterion":"Treningdan keyin bilim tekshirilgan","qs":["4-29","4-30","4-33"],"qnote":"","mapNo":"38, 39","module":"M-DV2"},{"code":"4.07","stage":"4","phase":"Rivojlanish","name":"Bilimni amalda qo‘llash","what":"Treningdan keyin yangi bilim ishda qo‘llanayotganini tekshirish","who":"Rahbar","when":"Treningdan 1 oy keyin","tool":"Kuzatuv varag‘i","result":"Qo‘llash dalili","criterion":"Ish natijasida o‘zgarish ko‘rinadi","qs":["4-34"],"qnote":"","mapNo":"37","module":"M-DV2"},{"code":"4.08","stage":"4","phase":"Rivojlanish","name":"Darajani baholash","what":"Karyera xaritasi mezonlari bo‘yicha baholash va daraja oshirish","who":"Rahbar + HR","when":"Har 6 oy","tool":"Karyera xaritasi","result":"Daraja bo‘yicha qaror","criterion":"Mezonlar bajarilgan","qs":["4-26","4-28"],"qnote":"","mapNo":"40","module":"M-DV3, A-DV"},{"code":"4.09","stage":"4","phase":"Ushlab qolish","name":"Xodimlar qoniqishi (eNPS)","what":"Rahbar, maosh, sharoit, yuklama va rivojlanishdan qoniqishni o‘lchash","who":"HR","when":"Har 6 oy","tool":"Anonim so‘rovnoma","result":"eNPS va bo‘lim kesimida tahlil","criterion":"Past ballar sababi o‘rganilgan","qs":["4-50","4-51","4-53","4-54"],"qnote":"","mapNo":"Yangi","module":"Jarayon (HR)"},{"code":"4.10","stage":"4","phase":"Ushlab qolish","name":"Ketish xavfini aniqlash","what":"Kuchli xodimlarda ketish belgilari bo‘lsa retention suhbati","who":"Rahbar + HR","when":"Har chorak","tool":"Xavf ro‘yxati","result":"Retention rejasi","criterion":"Kuchli xodimlar ketish ulushi kamaygan","qs":["4-63","4-64","4-65"],"qnote":"","mapNo":"Yangi","module":"Jarayon (HR)"},{"code":"4.11","stage":"4","phase":"Zaxira","name":"Zaxira kadr va o‘rinbosar","what":"Muhim lavozimlar uchun o‘rinbosar tayyorlash; xodim o‘z o‘rniga odam tarbiyalaydi","who":"Rahbar","when":"Doimiy","tool":"Zaxira kadrlar ro‘yxati","result":"Har muhim lavozimda o‘rinbosar","criterion":"O‘rinbosar asosiy vazifalarni bajara oladi","qs":["4-38","4-39","4-40"],"qnote":"","mapNo":"41, 42","module":"M-DV4"},{"code":"4.12","stage":"4","phase":"Zaxira","name":"Tajribani tizimga aylantirish","what":"Kuchli xodim o‘z usulini SOP va video darsga aylantirib, bilim bazasini yangilaydi","who":"Xodim + HR","when":"Har chorak","tool":"SOP, video","result":"Yangilangan bilim bazasi","criterion":"Chorakda kamida 1 ta yangi yoki yangilangan material","qs":[],"qnote":"Yangi (auditda yo‘q)","mapNo":"Yangi","module":"M-DV4"},{"code":"4.13","stage":"4","phase":"Zaxira","name":"Lavozimga ko‘tarilish","what":"Ichki vakansiyaga avval zaxiradagi xodimlarni ko‘rib chiqish","who":"Rahbar + HR","when":"Vakansiya ochilganda","tool":"Zaxira ro‘yxati","result":"Ichki ko‘tarilish","criterion":"Ichki promotion statistikasi yuritiladi","qs":["4-37","4-41"],"qnote":"","mapNo":"40","module":"M-DV3"},{"code":"5.01","stage":"5","phase":"Ketish","name":"Ariza va xabardor qilish","what":"Ishdan ketish tartibi va oldindan xabar berish muddatiga rioya","who":"Xodim + HR","when":"Ketishdan 2–4 hafta oldin","tool":"Ishdan bo‘shash nizomi","result":"Rasmiy ariza","criterion":"Muddat buzilmagan","qs":["5-1","5-2"],"qnote":"","mapNo":"7","module":"M-OF1"},{"code":"5.02","stage":"5","phase":"Ketish","name":"Exit interview","what":"Ketish sababi, rahbar, jamoa, maosh va yuklama haqida feedback","who":"HR (rahbar emas)","when":"Oxirgi hafta","tool":"Exit interview skripti","result":"Yozilgan sabablar","criterion":"Barcha savollarga javob olingan","qs":["5-3","5-4","5-5","5-6","5-7","5-8"],"qnote":"","mapNo":"48","module":"M-OF3"},{"code":"5.03","stage":"5","phase":"Topshirish","name":"Handover rejasi","what":"Vazifalar, tugallanmagan ishlar, mijozlar, loyihalar va kontaktlar ro‘yxati","who":"Xodim + Rahbar","when":"Ariza kunidan","tool":"Handover checklist","result":"Handover ro‘yxati","criterion":"Hammasi ro‘yxatga olingan","qs":["5-10","5-11","5-12","5-13","5-14","5-15"],"qnote":"","mapNo":"Yangi","module":"M-OF2"},{"code":"5.04","stage":"5","phase":"Topshirish","name":"O‘rinbosarni tayinlash","what":"Zaxiradagi yoki yangi xodimni o‘ringa tayinlash","who":"Rahbar","when":"1-hafta","tool":"Zaxira ro‘yxati","result":"Tayinlangan o‘rinbosar","criterion":"Har vazifa uchun yangi mas’ul bor","qs":["5-18","5-33"],"qnote":"","mapNo":"41, 46","module":"M-OF2"},{"code":"5.05","stage":"5","phase":"Topshirish","name":"O‘rinbosarni o‘rgatish","what":"Ketayotgan xodim lavozim vazifalarini o‘rinbosarga o‘rgatadi","who":"Xodim","when":"Qolgan muddat davomida","tool":"SOP, video darslar","result":"O‘rinbosar ishni boshlagan","criterion":"O‘rinbosar asosiy vazifalarni bajara oladi","qs":["5-17"],"qnote":"","mapNo":"42, 43","module":"M-OF2"},{"code":"5.06","stage":"5","phase":"Topshirish","name":"Bilimni topshirish","what":"Video darslik va SOPlarni yangilab topshirish","who":"Xodim + HR","when":"Oxirgi hafta","tool":"Bilim bazasi","result":"Yangilangan materiallar","criterion":"Xodimga bog‘liq bilim qolmagan","qs":["5-16","5-17"],"qnote":"","mapNo":"44","module":"M-OF2"},{"code":"5.07","stage":"5","phase":"Yopish","name":"Access va jihozlar","what":"Barcha loginlar, email, CRM, Drive, Telegram guruhlar yopiladi; jihoz va forma qaytariladi","who":"Admin/IT","when":"Oxirgi kun","tool":"Access ro‘yxati","result":"Yopilgan accesslar","criterion":"100% access yopilgan","qs":["5-20","5-21","5-22","5-23","5-24","5-25","5-26"],"qnote":"","mapNo":"45","module":"M-OF3"},{"code":"5.08","stage":"5","phase":"Yopish","name":"Yakuniy hisob-kitob","what":"Maosh, bonus va hujjatlarni yakunlash; handoverni rahbar tasdiqlaydi","who":"Buxgalteriya + Rahbar","when":"Oxirgi kun","tool":"Hisob-kitob varag‘i","result":"Yopilgan hisob","criterion":"Qarzdorlik yo‘q, tasdiq imzolangan","qs":["5-19","5-27"],"qnote":"","mapNo":"Yangi","module":"M-OF3, A-OF"},{"code":"5.09","stage":"5","phase":"Yopish","name":"Jamoa bilan xayrlashish","what":"Hurmat bilan xayrlashuv, tashakkurnoma va kerak bo‘lsa tavsiyanoma","who":"Rahbar","when":"Oxirgi kun","tool":"Tashakkurnoma shabloni","result":"Ijobiy ketish tajribasi","criterion":"Xodim kompaniyani tavsiya qiladi","qs":[],"qnote":"Yangi (auditda yo‘q)","mapNo":"47, 50, 51","module":"M-OF3"},{"code":"5.10","stage":"5","phase":"Tahlil","name":"Rehire status va baza","what":"Qayta ishga olish mumkinligi belgilanadi, xodim alumni bazasiga kiritiladi","who":"HR","when":"Ketgandan keyin 1 hafta","tool":"Alumni bazasi","result":"Rehire status","criterion":"Status asos bilan yozilgan","qs":["5-28","5-29","5-30"],"qnote":"","mapNo":"Yangi","module":"A-OF"},{"code":"5.11","stage":"5","phase":"Tahlil","name":"Ketish sabablari tahlili","what":"Exit interview natijalari umumlashtirilib, lavozim paketi va tizim yangilanadi","who":"HR + Rahbar","when":"Har chorak","tool":"Offboarding hisoboti","result":"O‘zgarishlar ro‘yxati","criterion":"Takrorlanuvchi sabablar bo‘yicha chora ko‘rilgan","qs":["5-9","5-31","5-32"],"qnote":"","mapNo":"Yangi","module":"Jarayon (HR)"},{"code":"5.12","stage":"5","phase":"Alumni","name":"Aloqani saqlash","what":"Bayramlar va tug‘ilgan kunda tabriklash, yangiliklardan xabardor qilish","who":"HR","when":"Doimiy","tool":"Alumni bazasi","result":"Faol alumni aloqasi","criterion":"Rehire=HA bo‘lganlar bilan yiliga kamida 4 aloqa","qs":[],"qnote":"Yangi (auditda yo‘q)","mapNo":"52, 53, 54, 55","module":"Alumni (HR)"},{"code":"5.13","stage":"5","phase":"Alumni","name":"Tadbirlarga taklif","what":"Korporativ bayram, team building va kurslarga taklif qilish","who":"HR","when":"Tadbir bo‘lganda","tool":"Alumni bazasi","result":"Ishtirok etgan alumni","criterion":"Taklif yuborilgan","qs":[],"qnote":"Yangi (auditda yo‘q)","mapNo":"49, 56, 57, 58","module":"Alumni (HR)"},{"code":"5.14","stage":"5","phase":"Alumni","name":"Qayta chorlash","what":"Kuchli sobiq xodimlarga mos vakansiya bo‘lganda birinchi bo‘lib taklif berish","who":"HR + Rahbar","when":"Vakansiya ochilganda","tool":"Alumni bazasi, zaxira ro‘yxati","result":"Qayta ishga olinganlar","criterion":"Qayta qabul qilinganlar ulushi kuzatiladi","qs":["5-30"],"qnote":"","mapNo":"Yangi","module":"Alumni (HR)"}];
+const EJM_MODULES = [{"code":"M-PB1","stage":"2","name":"EJM platformasidan foydalanish","type":"Umumiy","goal":"Xodim platformada darslarni ko‘rish, topshiriq yuborish va natijasini kuzatishni o‘rganadi","videos":"Platformaga kirish; darslar tartibi; topshiriq yuborish (#teg); ballarni ko‘rish","checklist":"Platformaga kirdi; 1 ta sinov topshirig‘ini yubordi; teg to‘g‘ri","owner":"Xodim + HR","attest":"Amaliy: ekran yozuvi","pass":"1 ta sinov topshirig‘i to‘g‘ri yuborilgan","duration":"1 kun","steps":["2.04"]},{"code":"M-PB2","stage":"2","name":"Korxona haqida","type":"Umumiy","goal":"Xodim kompaniya tarixi, mahsulot va xizmatlari, tuzilmasi va rahbarlarini biladi","videos":"Kompaniya tarixi; mahsulot va xizmatlar; mijozlar; tuzilma va rahbarlar","checklist":"Barcha darslar ko‘rildi; konspekt yozildi","owner":"Xodim","attest":"Test","pass":"80% va undan yuqori","duration":"1 kun","steps":["2.04","2.05"]},{"code":"M-PB3","stage":"2","name":"Texnik bilimlar","type":"Lavozimga xos","goal":"Lavozimda ishlatiladigan tizim va texnik tushunchalarni nazariy jihatdan o‘rganadi","videos":"Lavozim paketidagi texnik mavzular (T.05)","checklist":"Darslar ko‘rildi; mashqlar bajarildi","owner":"Xodim","attest":"Test + qisqa amaliy","pass":"80% va undan yuqori","duration":"1–3 kun","steps":["2.04","2.05"]},{"code":"M-PB4","stage":"2","name":"Lavozimga kerakli bilimlar","type":"Lavozimga xos","goal":"Lavozim uchun kerakli kasbiy bilimlarni oldindan o‘rganadi","videos":"Lavozim profili va portretidagi bilimlar (T.01, T.02)","checklist":"Darslar ko‘rildi; konspekt","owner":"Xodim","attest":"Test","pass":"80% va undan yuqori","duration":"1–3 kun","steps":["2.04","2.05"]},{"code":"A-PB","stage":"2","name":"BOSQICH ATTESTATSIYASI: Pre-boarding","type":"Attestatsiya","goal":"On-boardingga o‘tish uchun eshik","videos":"—","checklist":"4 ta modul attestatsiyasi yopilgan","owner":"HR","attest":"Yakuniy test","pass":"Umumiy 80%, har modul kamida 70%","duration":"1-kungacha","steps":["2.05","2.08"]},{"code":"M-OB1","stage":"3","name":"Kirish","type":"Umumiy","goal":"Xodim on-boarding ketma-ketligi, muddati, mentori va baholanish tartibini biladi","videos":"On-boarding xaritasi; muddatlar; mentor; attestatsiya qoidalari","checklist":"Reja bilan tanishdi; mentor bilan uchrashdi","owner":"Mentor","attest":"Video: o‘z so‘zi bilan tushuntirish","pass":"Ketma-ketlik va muddatni to‘g‘ri aytadi","duration":"1-kun","steps":["3.01"]},{"code":"M-OB2","stage":"3","name":"Korporativ madaniyat","type":"Umumiy","goal":"Xodim kompaniyadagidek harakat qiladi: qadriyatlar, kommunikatsiya, odob","videos":"Qadriyatlar va misollar; ichki kommunikatsiya; majlislar; kiyinish va odob; an’analar; taqiqlar","checklist":"1 oy davomida xulq-atvor kuzatuvi","owner":"Mentor","attest":"Vaziyatli savollar + mentor kuzatuvi","pass":"Vaziyatli savollar 80%, kuzatuvda qoidabuzarlik yo‘q","duration":"1-hafta + 1 oy kuzatuv","steps":["3.03"]},{"code":"M-OB3","stage":"3","name":"Lavozim instrumentlari","type":"Lavozimga xos","goal":"Xodim ishdagi tizim va instrumentlarda mustaqil ishlaydi","videos":"Har bir instrument bo‘yicha dars (T.05)","checklist":"Har instrumentda 1 ta real amal bajarildi","owner":"Mentor","attest":"Amaliy: ekran yozuvi","pass":"Barcha asosiy amallar xatosiz","duration":"1–2 hafta","steps":["3.04"]},{"code":"M-OB4","stage":"3","name":"Lavozim vazifalari va SOP","type":"Lavozimga xos","goal":"Xodim asosiy vazifalarni SOP bo‘yicha bajaradi","videos":"Har bir SOP bo‘yicha dars (T.04)","checklist":"Har SOP: kuzatdi, birga bajardi, mustaqil bajardi","owner":"Mentor","attest":"Amaliy: real vazifa, mentor bahosi","pass":"Har SOP kamida 80%, KRITIK SOPlar 100%","duration":"Sinov davomida","steps":["3.05","3.06"]},{"code":"M-OB5","stage":"3","name":"KPI va baholash","type":"Lavozimga xos","goal":"Xodim qanday baholanishini va sinov maqsadlarini biladi","videos":"KPI kartasi (T.07); sinov maqsadlari; hisoblash","checklist":"KPI kartasi bilan tanishdi; o‘z natijasini hisobladi","owner":"Rahbar","attest":"Video: KPI ni o‘z so‘zi bilan tushuntirish","pass":"KPI va formulani to‘g‘ri tushuntiradi","duration":"1-hafta","steps":["3.02","3.09"]},{"code":"M-OB6","stage":"3","name":"Amaliyot va yakuniy attestatsiya","type":"Lavozimga xos","goal":"Xodim mustaqil ishlashga tayyorligini isbotlaydi","videos":"30-kun tekshiruvi; yakuniy imtihon tartibi","checklist":"30-kun tekshiruvi; 60-kun KPI; yakuniy imtihon","owner":"Rahbar","attest":"Nazariy + amaliy imtihon","pass":"Umumiy 80%, KRITIK topshiriqlar 100%","duration":"Sinov oxiri","steps":["3.08","3.09","3.10"]},{"code":"A-OB","stage":"3","name":"BOSQICH ATTESTATSIYASI: On-boarding","type":"Attestatsiya","goal":"Sinovdan o‘tish qarori","videos":"—","checklist":"6 ta modul attestatsiyasi yopilgan","owner":"Rahbar + HR","attest":"Yakuniy imtihon + KPI","pass":"Umumiy 80%, KRITIK 100%, KPI rejaning kamida 70%","duration":"Sinov oxiri","steps":["3.10","3.11"]},{"code":"M-DV1","stage":"4","name":"KPI va natija boshqaruvi","type":"Lavozimga xos","goal":"Xodim natijasini har oy biladi va yaxshilaydi","videos":"Oylik KPI hisobi; 1:1 suhbat; past natijada reja","checklist":"Har oy KPI ko‘rib chiqildi; 1:1 o‘tdi","owner":"Rahbar","attest":"Oylik KPI natijasi","pass":"KPI rejaning kamida 80%","duration":"Har oy","steps":["4.01","4.02","4.03"]},{"code":"M-DV2","stage":"4","name":"Rivojlanish rejasi va malaka oshirish","type":"Umumiy","goal":"Xodim IDP asosida o‘qiydi va bilimini ishda qo‘llaydi","videos":"IDP tuzish; chorak maqsadlari; treninglar","checklist":"Chorak maqsadlari yozildi; treninglar tugatildi; qo‘llash dalili","owner":"Rahbar + Xodim","attest":"Trening testi + qo‘llash dalili","pass":"Chorak maqsadlarining kamida 80%","duration":"Har chorak","steps":["4.05","4.06","4.07"]},{"code":"M-DV3","stage":"4","name":"Karyera darajalari","type":"Lavozimga xos","goal":"Xodim keyingi darajaga o‘tish mezonlarini biladi va unga intiladi","videos":"Karyera xaritasi (T.08); daraja mezonlari","checklist":"Joriy daraja belgilangan; keyingi daraja uchun reja","owner":"Rahbar + HR","attest":"Daraja attestatsiyasi","pass":"Keyingi daraja mezonlari to‘liq bajarilgan","duration":"Har 6 oy","steps":["4.08","4.13"]},{"code":"M-DV4","stage":"4","name":"E’tirof, ustozlik va zaxira kadr","type":"Umumiy","goal":"Kuchli xodim e’tirof etiladi, o‘z tajribasini tizimga aylantiradi va o‘rinbosar tayyorlaydi","videos":"Mukofot nizomi; SOP va video yozish; ustozlik","checklist":"Chorakda 1 ta SOP yoki video; o‘rinbosar tayyorlanmoqda","owner":"HR","attest":"Yaratilgan material + o‘rinbosar bahosi","pass":"Chorakda kamida 1 ta material","duration":"Har chorak","steps":["4.04","4.11","4.12"]},{"code":"A-DV","stage":"4","name":"BOSQICH ATTESTATSIYASI: Development","type":"Attestatsiya","goal":"Daraja va rivojlanish natijasi","videos":"—","checklist":"4 ta modul natijasi","owner":"Rahbar + HR","attest":"Daraja attestatsiyasi","pass":"Daraja mezonlari, KPI 80%","duration":"Har 6 oy","steps":["4.08"]},{"code":"M-OF1","stage":"5","name":"Ishdan bo‘shash tartib-qoidalari","type":"Umumiy","goal":"Xodim ketish qoidalari, muddatlari, huquq va majburiyatlarini biladi","videos":"SOP + ish yo‘riqnomasi: ariza, xabar berish muddati, huquqlar","checklist":"Ariza berildi; muddat kelishildi","owner":"HR","attest":"Test","pass":"80% va undan yuqori","duration":"Ariza kuni","steps":["5.01"]},{"code":"M-OF2","stage":"5","name":"O‘rniga odam tayyorlash","type":"Lavozimga xos","goal":"Xodim o‘rinbosarni o‘rgatadi va bilimlarni topshiradi","videos":"SOP + ish yo‘riqnomasi: handover, o‘rgatish, SOP va videoni yangilash","checklist":"Handover ro‘yxati; o‘rinbosar o‘rgatildi; materiallar yangilandi","owner":"Rahbar","attest":"«Sizsiz test»: o‘rinbosar vazifani mustaqil bajaradi","pass":"Asosiy vazifalar o‘rinbosar tomonidan bajarilgan","duration":"Qolgan muddat","steps":["5.03","5.04","5.05","5.06"]},{"code":"M-OF3","stage":"5","name":"Ishdan ketish","type":"Umumiy","goal":"Oxirgi kun jarayoni to‘liq va hurmat bilan yopiladi","videos":"SOP + ish yo‘riqnomasi: access, jihoz, hisob-kitob, exit interview, xayrlashuv","checklist":"Accesslar yopildi; jihoz qaytdi; hisob-kitob; exit interview","owner":"Admin/IT + HR","attest":"Checklist","pass":"Checklist 100%","duration":"Oxirgi kun","steps":["5.02","5.07","5.08","5.09"]},{"code":"A-OF","stage":"5","name":"BOSQICH ATTESTATSIYASI: Off-boarding","type":"Attestatsiya","goal":"Lavozim xavfsiz topshirildi","videos":"—","checklist":"3 ta modul yopilgan","owner":"Rahbar + HR","attest":"Handover dalolatnomasi","pass":"Dalolatnoma imzolangan, access 100% yopilgan","duration":"Oxirgi kun","steps":["5.08","5.10","5.11"]}];
+const EJM_RULES = [{"n":"№","title":"Qoida","text":"Mazmuni"},{"n":"1","title":"Modul o‘tish bali","text":"Har modul attestatsiyasi kamida 80% bo‘lishi kerak."},{"n":"2","title":"Bosqich o‘tish bali","text":"Bosqich attestatsiyasi: umumiy natija kamida 80%, har bir modul kamida 70%."},{"n":"3","title":"KRITIK topshiriqlar","text":"Xatosi pul, mijoz yoki ma’lumot xavfsizligiga zarar yetkazadigan topshiriqlar «KRITIK» deb belgilanadi va 100% bajarilishi shart."},{"n":"4","title":"Qayta topshirish","text":"Modul attestatsiyasini ko‘pi bilan 2 marta qayta topshirish mumkin. Har urinishdan oldin mentor bilan xatolar tahlili o‘tkaziladi."},{"n":"5","title":"Muddat","text":"Modul attestatsiyasi modul tugaganidan keyin 2 ish kuni ichida topshiriladi."},{"n":"6","title":"Pre-boardingdan o‘tolmaslik","text":"Ish boshlash sanasi kechiktiriladi yoki offer rahbar bilan qayta ko‘rib chiqiladi."},{"n":"7","title":"On-boardingdan o‘tolmaslik","text":"Sinov muddati bir marta, ko‘pi bilan 1 oyga uzaytiriladi. Ikkinchi marta o‘tolmasa, sinov yakunlanadi."},{"n":"8","title":"Development attestatsiyasi","text":"Har 6 oyda daraja attestatsiyasi. O‘tolmasa daraja saqlanadi va 3 oylik rivojlanish rejasi tuziladi."},{"n":"9","title":"Off-boarding","text":"Handover dalolatnomasi oxirgi ish kunigacha rahbar tomonidan imzolanadi; accesslar 100% yopiladi."},{"n":"10","title":"Dalil","text":"Har topshiriq video yoki ekran yozuvi bilan #teg orqali yuboriladi. Dalilsiz topshiriq baholanmaydi."},{"n":"11","title":"Adolatli baholash","text":"Baholovchi rubrika bo‘yicha baho qo‘yadi va izoh yozadi. Xodim 3 ish kuni ichida e’tiroz bildirishi mumkin, HR qayta ko‘rib chiqadi."},{"n":"12","title":"Xodim bahosi","text":"Har modul oxirida xodim 2 savolga 1–5 baho beradi. O‘rtacha bahosi 3,5 dan past modul qayta ko‘rib chiqiladi."},{"n":"13","title":"Hujjatlash","text":"Barcha natijalar xodim kartasiga yoziladi va lavozimda ishlagan butun davr saqlanadi."}];
+
+    const MAP_STAGES = [
+      { id: 'T', name: 'T. Lavozim paketi', short: 'Lavozim paketi', color: '#6b7280', when: 'Yollashdan oldin, har lavozimga 1 marta' },
+      { id: '1', name: '1. Hiring', short: 'Hiring', color: '#0f766e', when: 'Vakansiyadan offergacha' },
+      { id: '2', name: '2. Pre-boarding', short: 'Pre-boarding', color: '#e09b2d', when: 'Offerdan 1-ish kunigacha' },
+      { id: '3', name: '3. On-boarding', short: 'On-boarding', color: '#1e3a6e', when: '1-kundan sinov yakunigacha (30/60 kun nazorat)' },
+      { id: '4', name: '4. Development', short: 'Development', color: '#2a7fba', when: 'Sinovdan keyin · doimiy sikl' },
+      { id: '5', name: '5. Off-boarding', short: 'Off-boarding', color: '#6d4bc2', when: 'Arizadan alumnigacha' }
+    ];
+
+    const STEP_BY_CODE = {};
+    EJM_STEPS.forEach(st => { STEP_BY_CODE[st.code] = st; });
+    const QUESTION_BY_CODE = {};
+    EJM_TEMPLATE.forEach(stg => stg.blocks.forEach(b => b.questions.forEach(q => {
+      QUESTION_BY_CODE[q.code] = { q, block: b, stage: stg };
+    })));
+    const STEPS_BY_QUESTION = {};
+    EJM_STEPS.forEach(st => st.qs.forEach(c => { (STEPS_BY_QUESTION[c] = STEPS_BY_QUESTION[c] || []).push(st); }));
+
+    let wsPane = 'audit';
+    const bneckOpen = { audit: null, map: null };
+    let mapOnlyProblems = false;
+
+    const pcolor = p => p <= 40 ? '#F0384B' : p <= 60 ? '#F5A524' : p <= 80 ? '#2F62EE' : '#15B67A';
+    const LEVEL = p => (p <= 20 ? 'Kritik' : p <= 40 ? 'Zaif' : p <= 60 ? 'Rivojlanmoqda' : p <= 80 ? 'Boshqariladi' : 'Tizimlashgan');
+    const fmtPct = p => String(p).replace('.', ',') + '%';
+
+    function curCompany() { return companies.find(c => c.id === currentCompanyId); }
+
+    // Savollar kodlari bo'yicha ball: faqat javob berilganlar hisobga olinadi
+    function scoreOfCodes(company, codes) {
+      const uniq = [...new Set(codes)];
+      let answered = 0, points = 0;
+      uniq.forEach(code => {
+        const a = company.answers[code] && company.answers[code].answer;
+        if (!a) return;
+        answered++;
+        points += a === 'HA' ? 1 : a === 'QISMAN' ? 0.5 : 0;
+      });
+      return { total: uniq.length, answered, points, pct: answered ? Math.round((points / answered) * 100) : 0 };
+    }
+    const stepScore = (company, st) => scoreOfCodes(company, st.qs);
+    const stepsOfStage = sid => EJM_STEPS.filter(st => st.stage === sid);
+    const stageMapScore = (company, sid) => scoreOfCodes(company, stepsOfStage(sid).flatMap(st => st.qs));
+    const moduleScore = (company, m) => scoreOfCodes(company, m.steps.flatMap(c => (STEP_BY_CODE[c] ? STEP_BY_CODE[c].qs : [])));
+
+    function badQuestions(company, codes) {
+      return [...new Set(codes)].filter(c => {
+        const a = company.answers[c] && company.answers[c].answer;
+        return a && a !== 'HA';
+      });
+    }
+
+    // ---- bo'limlar almashtirgichi ----
+    function setPane(pane) {
+      wsPane = pane;
+      ['audit', 'bneck', 'map'].forEach(k => {
+        const pn = document.getElementById({ audit: 'wsAuditPane', bneck: 'wsBneckPane', map: 'wsMapPane' }[k]);
+        pn.classList.toggle('hidden', k !== pane);
+        document.getElementById('paneBtn_' + k).className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition ' +
+          (k === pane ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900');
+      });
+      refreshPane();
+    }
+    function refreshPane() {
+      if (!curCompany()) return;
+      if (wsPane === 'bneck') renderBottleneck();
+      else if (wsPane === 'map') renderMap();
+    }
+
+    // ---- audit savoli ostidagi "qaysi qadamga tegishli" belgilar ----
+    function stepChipsFor(qCode) {
+      const list = STEPS_BY_QUESTION[qCode];
+      if (!list || !list.length) return '';
+      return '<div class="flex flex-wrap gap-1.5 mt-1.5">' + list.map(st =>
+        `<button type="button" onclick="openStepModal('${st.code}')" title="EJM xaritasidagi qadam"
+           class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[11px] font-semibold hover:bg-indigo-100">🗺 ${st.code} ${escapeHtml(st.name)}</button>`).join('') + '</div>';
+    }
+
+    // ---- Bottleneck: quvur bo'lagi ----
+    function pipeSegment(title, icon, sc, active, onclickJs, unit) {
+      const W = 132, H = 76;
+      const has = sc.answered > 0;
+      const pc = has ? sc.pct : 100;
+      const open = Math.max(0.1, pc / 100);
+      const t = (H - 8) * (1 - open) / 2;
+      const color = has ? pcolor(sc.pct) : '#A7B0C0';
+      const y0 = 4, y1 = H - 4;
+      const d = `M0,${y0} C${W * 0.32},${y0} ${W * 0.3},${y0 + t} ${W / 2},${y0 + t} C${W * 0.7},${y0 + t} ${W * 0.68},${y0} ${W},${y0}`
+        + ` L${W},${y1} C${W * 0.68},${y1} ${W * 0.7},${y1 - t} ${W / 2},${y1 - t} C${W * 0.3},${y1 - t} ${W * 0.32},${y1} 0,${y1} Z`;
+      const gap = (y1 - y0) - 2 * t;
+      const stuck = has && sc.pct < 60 ? Math.round((1 - sc.pct / 100) * 12) : 0;
+      let dots = '';
+      for (let i = 0; i < stuck; i++) {
+        const col = Math.floor(i / 4), row = i % 4;
+        dots += `<circle cx="${9 + col * 9 + (row % 2) * 3}" cy="${H / 2 - 15 + row * 10}" r="3.6" />`;
+      }
+      const tip = has ? `${title}: ${sc.pct}% — ${LEVEL(sc.pct)}` : `${title}: javob berilmagan`;
+      return `
+        <button type="button" class="pseg${active ? ' on' : ''}" onclick="${onclickJs}" title="${escapeHtml(tip)}">
+          <div class="pseg-t"><span>${icon || ''}</span> ${escapeHtml(title)}</div>
+          <svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">
+            <path d="${d}" fill="${color}" fill-opacity="${has ? 0.28 : 0.12}" stroke="${color}" stroke-width="2.5" ${has ? '' : 'stroke-dasharray="5 4"'} />
+            ${has ? `<line x1="0" y1="${H / 2}" x2="${W}" y2="${H / 2}" stroke="${color}" stroke-width="${Math.max(2, gap * 0.45)}" stroke-dasharray="7 9" class="pflow" style="animation-duration:${(0.6 + (1 - open) * 2.4).toFixed(2)}s" />` : ''}
+            <g fill="#7f1d1d" stroke="#fff" stroke-width="0.8" class="pstuck">${dots}</g>
+          </svg>
+          <div class="pseg-b">
+            ${has ? `<b style="color:${color}">${fmtPct(sc.pct)}</b><small>${LEVEL(sc.pct)}${stuck > 0 ? ` · ${unit} o‘ta olmayapti` : ''}<br>${sc.answered}/${sc.total} javob</small>`
+              : `<b style="color:${color}">—</b><small>javob yo‘q (${sc.total} mezon)</small>`}
+          </div>
+        </button>`;
+    }
+
+    function bneckToggle(row, id) {
+      bneckOpen[row] = bneckOpen[row] === id ? null : id;
+      renderBottleneck();
+    }
+
+    function problemLine(company, label, codes, onclickJs) {
+      const bad = badQuestions(company, codes);
+      if (!bad.length) return '';
+      const texts = bad.slice(0, 4).map(c => escapeHtml(QUESTION_BY_CODE[c].q.text.replace(/\?$/, ''))).join(' · ');
+      return `<div class="text-xs"><b ${onclickJs ? `class="cursor-pointer hover:underline" onclick="${onclickJs}"` : ''}>${escapeHtml(label)}</b> — ${bad.length} ta muammo: <span class="text-slate-600">${texts}${bad.length > 4 ? ' …' : ''}</span></div>`;
+    }
+
+    function bneckRow(company, key, title, unit, segs) {
+      // segs: [{id,title,icon,codes,subs:[{id,title,codes,onclick?}]}]
+      const scored = segs.map(sg => ({ sg, sc: scoreOfCodes(company, sg.codes) }));
+      const all = scoreOfCodes(company, segs.flatMap(sg => sg.codes));
+      const worst = scored.filter(x => x.sc.answered).sort((a, b) => a.sc.pct - b.sc.pct).slice(0, 3);
+      const open = segs.find(sg => sg.id === bneckOpen[key]);
+      let sub = '';
+      if (open) {
+        sub = `
+          <div class="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+            <div class="flex items-center gap-2 text-sm"><b>${escapeHtml(open.title)}</b> — ichki bo‘limlar
+              <button class="ml-auto text-xs font-bold text-slate-500 hover:text-slate-800" onclick="bneckToggle('${key}','${open.id}')">× yopish</button></div>
+            <div class="pipe">${open.subs.map(sb => pipeSegment(sb.title, '', scoreOfCodes(company, sb.codes), false, sb.onclick || 'void 0', unit)).join('')}</div>
+            <div class="space-y-1.5 mt-1">${open.subs.map(sb => problemLine(company, sb.title, sb.codes, sb.onclick)).join('')}</div>
+          </div>`;
+      }
+      return `
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+          <div class="flex flex-wrap items-baseline gap-3 mb-3">
+            <h3 class="text-lg font-extrabold text-slate-900">${title}</h3>
+            <span class="text-2xl font-extrabold" style="color:${all.answered ? pcolor(all.pct) : '#94a3b8'}">${all.answered ? fmtPct(all.pct) : '—'}</span>
+            <span class="text-xs text-slate-500">${all.answered} / ${all.total} mezonga javob berilgan</span>
+            ${worst.length ? `<span class="ml-auto flex flex-wrap items-center gap-1.5 text-xs text-slate-500">Eng tor joylar: ${worst.map((x, i) =>
+              `<button class="px-2.5 py-0.5 rounded-full bg-slate-100 font-bold hover:bg-slate-200" style="color:${pcolor(x.sc.pct)}" onclick="bneckToggle('${key}','${x.sg.id}')">${i + 1}. ${escapeHtml(x.sg.title)} (${fmtPct(x.sc.pct)})</button>`).join('')}</span>` : ''}
+          </div>
+          ${all.answered ? '' : '<div class="text-xs text-slate-500 mb-2">Bu bo‘lim bo‘yicha hali javob kiritilmagan — «Audit savollari» bo‘limida to‘ldiring.</div>'}
+          <div class="pipe">
+            <div class="pipe-in">${unit === 'xodim' ? 'Nomzodlar / xodimlar' : 'Oqim'} →</div>
+            ${scored.map(({ sg, sc }) => pipeSegment(sg.title, sg.icon, sc, sg.id === bneckOpen[key], `bneckToggle('${key}','${sg.id}')`, unit)).join('')}
+            <div class="pipe-out">→ Natija</div>
+          </div>
+          ${sub}
+        </div>`;
+    }
+
+    function renderBottleneck() {
+      const company = curCompany();
+      const pane = document.getElementById('wsBneckPane');
+      if (!company) return;
+
+      // 1-qator: audit bosqichlari -> bloklar
+      const auditSegs = EJM_TEMPLATE.map(stg => ({
+        id: stg.id, title: stg.shortName, icon: '',
+        codes: stg.blocks.flatMap(b => b.questions.map(q => q.code)),
+        subs: stg.blocks.map(b => ({ title: b.title, codes: b.questions.map(q => q.code) }))
+      }));
+      // 2-qator: EJM xaritasi bosqichlari -> qadamlar
+      const mapSegs = MAP_STAGES.map(ms => ({
+        id: ms.id, title: ms.short, icon: '',
+        codes: stepsOfStage(ms.id).flatMap(st => st.qs),
+        subs: stepsOfStage(ms.id).map(st => ({ title: st.code + ' ' + st.name, codes: st.qs, onclick: `openStepModal('${st.code}')` }))
+      }));
+
+      const legend = [[90, 'Tizimlashgan'], [70, 'Boshqariladi'], [50, 'Rivojlanmoqda'], [30, 'Zaif / kritik']]
+        .map(([pc, n]) => `<span class="inline-flex items-center gap-1.5"><i class="inline-block w-3 h-3 rounded" style="background:${pcolor(pc)}"></i>${n}</span>`).join('');
+
+      pane.innerHTML = `
+        <div class="flex flex-wrap items-end gap-3">
+          <div class="flex-1 min-w-[260px]">
+            <h2 class="text-2xl font-extrabold text-slate-900">🚧 Bottleneck — tor joylar</h2>
+            <p class="text-sm text-slate-500">Har bir bo‘lim — quvur bo‘lagi. Ball qancha past bo‘lsa, quvur shuncha tor: oqim sekinlashadi va oldida odamlar to‘planib qoladi. Bo‘lim ustiga bossangiz, ichki bo‘limlari ochiladi.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3 text-xs text-slate-600">${legend}</div>
+        </div>
+        ${bneckRow(company, 'audit', 'Audit bosqichlari (6 bosqich · 36 blok)', 'xodim', auditSegs)}
+        ${bneckRow(company, 'map', 'EJM xaritasi (Xodim fabrikasi · 67 qadam)', 'xodim', mapSegs)}
+        <p class="text-xs text-slate-400">Ball faqat javob berilgan mezonlar bo‘yicha hisoblanadi (HA=1, QISMAN=0,5, YO'Q=0). Qadam ustiga bossangiz, unga bog‘langan audit savollari ochiladi.</p>`;
+    }
+
+    // ---- EJM xaritasi (Xodim fabrikasi) ----
+    function scorePill(sc, small) {
+      if (!sc.answered) return `<span class="shrink-0 ${small ? 'text-[10px] px-1.5' : 'text-[11px] px-2'} py-0.5 rounded-full bg-slate-100 text-slate-400 font-bold">—</span>`;
+      const c = pcolor(sc.pct);
+      return `<span class="shrink-0 ${small ? 'text-[10px] px-1.5' : 'text-[11px] px-2'} py-0.5 rounded-full font-extrabold text-white" style="background:${c}">${sc.pct}%</span>`;
+    }
+
+    function toggleMapProblems() { mapOnlyProblems = !mapOnlyProblems; renderMap(); }
+
+    function renderMap() {
+      const company = curCompany();
+      const pane = document.getElementById('wsMapPane');
+      if (!company) return;
+
+      const linkedSteps = EJM_STEPS.filter(st => st.qs.length);
+      const evaluated = linkedSteps.filter(st => stepScore(company, st).answered > 0).length;
+      const total = scoreOfCodes(company, EJM_STEPS.flatMap(st => st.qs));
+
+      const cols = MAP_STAGES.map(ms => {
+        const sc = stageMapScore(company, ms.id);
+        const steps = stepsOfStage(ms.id).filter(st => !mapOnlyProblems || badQuestions(company, st.qs).length > 0);
+        const mods = EJM_MODULES.filter(m => m.stage === ms.id && !m.code.startsWith('A-'));
+        const att = EJM_MODULES.find(m => m.stage === ms.id && m.code.startsWith('A-'));
+        const range = stepsOfStage(ms.id);
+        const stepsHtml = steps.map(st => {
+          const ss = stepScore(company, st);
+          return `<button type="button" class="mstep" onclick="openStepModal('${st.code}')" title="${escapeHtml(st.name)}">
+              <b class="shrink-0 text-slate-900">${st.code}</b><span class="flex-1 text-slate-700 leading-tight">${escapeHtml(st.name)}</span>${scorePill(ss, true)}</button>`;
+        }).join('') || '<div class="text-xs text-slate-400 p-2">Muammoli qadam yo‘q</div>';
+
+        const modsHtml = mods.map(m => {
+          const ms2 = moduleScore(company, m);
+          const general = m.type === 'Umumiy';
+          return `<button type="button" onclick="openModuleModal('${m.code}')" class="block w-full text-left bg-white rounded-xl border border-slate-200 border-l-4 p-3 hover:shadow-md transition" style="border-left-color:${ms.color}">
+              <div class="flex items-start justify-between gap-2"><span class="text-[11px] font-bold text-slate-400">${m.code}</span>${scorePill(ms2, true)}</div>
+              <div class="text-sm font-extrabold text-slate-900 leading-snug">${escapeHtml(m.name)}</div>
+              <span class="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${general ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}">${escapeHtml(m.type)}</span>
+              <div class="text-[11px] text-slate-500 mt-1 leading-snug">Attestatsiya: ${escapeHtml(m.attest || '')}</div>
+            </button>`;
+        }).join('');
+
+        const attHtml = att ? (() => {
+          const as = moduleScore(company, att);
+          return `<button type="button" onclick="openModuleModal('${att.code}')" class="block w-full text-left rounded-xl p-3 text-white hover:opacity-95" style="background:${ms.color}">
+              <div class="flex items-start justify-between gap-2"><span class="text-sm font-extrabold">🔒 Bosqich attestatsiyasi</span>${as.answered ? `<span class="text-[11px] px-2 py-0.5 rounded-full bg-white/90 font-extrabold" style="color:${pcolor(as.pct)}">${as.pct}%</span>` : ''}</div>
+              <div class="text-[11px] opacity-90 mt-1 leading-snug">${escapeHtml(att.pass || '')}</div></button>`;
+        })() : '';
+
+        const note = ms.id === 'T' ? 'Lavozimga xos modullar shu paketdan quriladi. Umumiy modullar kompaniyada 1 marta quriladi.'
+          : ms.id === '1' ? 'Qabul qilingan offer → Pre-boarding boshlanadi.' : '';
+
+        return `
+          <div class="mapcol space-y-3">
+            <div class="chev text-white font-extrabold text-sm px-4 py-3 flex items-center justify-between gap-2" style="background:${ms.color}">
+              <span>${escapeHtml(ms.name)}</span>
+              ${sc.answered ? `<span class="text-[11px] px-2 py-0.5 rounded-full bg-white/90 font-extrabold mr-3" style="color:${pcolor(sc.pct)}">${sc.pct}%</span>` : ''}
+            </div>
+            <div class="text-[11px] text-slate-500 min-h-[30px]">${escapeHtml(ms.when)}</div>
+            <div class="bg-white rounded-xl border border-slate-200 p-2">
+              <div class="text-[11px] font-bold text-slate-500 px-1.5 pb-1">${ms.id === 'T' ? 'Lavozim paketi' : 'Qadamlar'} (${range[0].code}–${range[range.length - 1].code})</div>
+              ${stepsHtml}
+            </div>
+            ${note ? `<div class="rounded-xl bg-slate-50 border border-slate-200 p-2.5 text-[11px] text-slate-600"><b class="text-slate-500">NATIJA</b><br>${escapeHtml(note)}</div>` : ''}
+            ${modsHtml}
+            ${attHtml}
+          </div>`;
+      }).join('');
+
+      const s6 = scoreOfCodes(company, EJM_TEMPLATE[5].blocks.flatMap(b => b.questions.map(q => q.code)));
+      pane.innerHTML = `
+        <div class="flex flex-wrap items-end gap-3">
+          <div class="flex-1 min-w-[260px]">
+            <h2 class="text-2xl font-extrabold text-slate-900">🗺 EJM xaritasi · Xodim fabrikasi</h2>
+            <p class="text-sm text-slate-500">Barcha lavozimlar uchun yagona tizim: lavozim paketi → 5 bosqich. Har modul = video darslik + checklist + attestatsiya. Qadam yoki modul ustiga bosing — unga bog‘langan audit savollari ochiladi va shu yerning o‘zida javob berish mumkin.</p>
+          </div>
+          <div class="flex items-center gap-3 text-xs">
+            <span class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700">Baholangan qadamlar: <b>${evaluated}</b> / ${linkedSteps.length}</span>
+            <span class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700">Xarita natijasi: <b style="color:${total.answered ? pcolor(total.pct) : '#94a3b8'}">${total.answered ? total.pct + '%' : '—'}</b></span>
+            <button onclick="toggleMapProblems()" class="px-3 py-1.5 rounded-xl font-semibold ${mapOnlyProblems ? 'bg-rose-600 text-white' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}">Faqat muammoli qadamlar</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto pb-3">
+          <div class="grid gap-3" style="grid-template-columns:repeat(6,minmax(215px,1fr));min-width:1330px">${cols}</div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600"><b>6. EJM boshqaruvi</b> (audit natijasi: <b style="color:${s6.answered ? pcolor(s6.pct) : '#94a3b8'}">${s6.answered ? s6.pct + '%' : '—'}</b>): lavozim paketlari versiyasi va yillik yangilanishi · pilot · samaradorlik ko‘rsatkichlari</div>
+          <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600"><b>O‘lchanadi:</b> mustaqil ishga o‘tish muddati · sinovda ketganlar % · attestatsiyadan 1-urinishda o‘tish % · 90 kunlik saqlanish · eNPS</div>
+          <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600"><span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold text-[10px]">Umumiy</span> kompaniyada 1 marta &nbsp; <span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-bold text-[10px]">Lavozimga xos</span> har lavozimga alohida</div>
+        </div>`;
+    }
+
+    // ---- qadam / modul oynasi ----
+    let openStepCode = null, openModuleCode = null;
+
+    function modalAnswerButtons(code, ans) {
+      const cls = (v, on, off) => `answer-btn px-2.5 py-1 rounded-lg border text-[11px] font-extrabold ${ans === v ? on : off}`;
+      const q = JSON.stringify(code);
+      return `<div class="flex items-center gap-1.5 shrink-0">
+        <button type="button" onclick='modalAnswer(${q},"HA")' class="${cls('HA', 'bg-emerald-600 text-white border-emerald-600', 'bg-white text-slate-700 border-slate-200 hover:bg-emerald-50')}">HA</button>
+        <button type="button" onclick='modalAnswer(${q},"QISMAN")' class="${cls('QISMAN', 'bg-amber-500 text-white border-amber-500', 'bg-white text-slate-700 border-slate-200 hover:bg-amber-50')}">QISMAN</button>
+        <button type="button" onclick='modalAnswer(${q},"YO\\u2019Q")' class="${cls("YO'Q", 'bg-rose-600 text-white border-rose-600', 'bg-white text-slate-700 border-slate-200 hover:bg-rose-50')}">YO'Q</button>
+      </div>`;
+    }
+
+    function modalQuestionList(company, codes) {
+      if (!codes.length) return '<div class="text-xs text-slate-500 p-3 rounded-xl bg-slate-50">Bu qadam uchun auditda alohida savol yo‘q («Yangi» qadam).</div>';
+      return '<div class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">' + codes.map(c => {
+        const qi = QUESTION_BY_CODE[c];
+        const ans = (company.answers[c] && company.answers[c].answer) || '';
+        return `<div class="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div class="flex items-start gap-2 text-sm">
+            <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono text-[11px] font-bold shrink-0 mt-0.5">${c}</span>
+            <div><span class="text-slate-800 font-medium leading-snug">${escapeHtml(qi.q.text)}</span>
+            <button type="button" class="block text-[11px] text-brand-600 hover:underline" onclick="goToQuestion('${c}')">Audit savollarida ochish →</button></div>
+          </div>
+          ${modalAnswerButtons(c, ans)}
+        </div>`;
+      }).join('') + '</div>';
+    }
+
+    function showStepModal() {
+      const modal = document.getElementById('stepModal');
+      modal.classList.remove('hidden'); modal.classList.add('flex');
+    }
+    function closeStepModal() {
+      const modal = document.getElementById('stepModal');
+      modal.classList.add('hidden'); modal.classList.remove('flex');
+      openStepCode = null; openModuleCode = null;
+    }
+
+    function infoRow(label, val) {
+      if (!val) return '';
+      return `<div class="grid grid-cols-3 gap-3 text-sm py-1.5 border-b border-slate-100"><div class="text-xs font-bold text-slate-500 uppercase tracking-wide">${label}</div><div class="col-span-2 text-slate-800">${escapeHtml(val)}</div></div>`;
+    }
+
+    function renderStepModal() {
+      const company = curCompany();
+      const st = STEP_BY_CODE[openStepCode];
+      if (!company || !st) return;
+      const ms = MAP_STAGES.find(x => x.id === st.stage);
+      const sc = stepScore(company, st);
+      const mods = EJM_MODULES.filter(m => m.steps.includes(st.code));
+      document.getElementById('stepModalBody').innerHTML = `
+        <div class="px-6 py-4 text-white flex items-start justify-between gap-3" style="background:${ms.color}">
+          <div><div class="text-xs font-semibold opacity-90">${escapeHtml(ms.name)} · ${escapeHtml(st.phase || '')}</div>
+            <h3 class="text-xl font-extrabold">${st.code} · ${escapeHtml(st.name)}</h3></div>
+          <div class="flex items-center gap-2">
+            ${sc.answered ? `<span class="px-2.5 py-1 rounded-full bg-white font-extrabold text-sm" style="color:${pcolor(sc.pct)}">${sc.pct}%</span>` : ''}
+            <button onclick="closeStepModal()" class="p-1 rounded-lg hover:bg-white/15" aria-label="Yopish">✕</button>
+          </div>
+        </div>
+        <div class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+          <div>${infoRow('Nima qilinadi', st.what)}${infoRow('Mas’ul', st.who)}${infoRow('Qachon', st.when)}${infoRow('Instrument', st.tool)}${infoRow('Kutilgan natija', st.result)}${infoRow('Baholash mezoni', st.criterion)}
+            ${mods.length ? infoRow('Modul', mods.map(m => m.code + ' ' + m.name).join('; ')) : ''}</div>
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Diagnostika savollari (${st.qs.length}) — ${sc.answered}/${sc.total} javob berilgan</h4>
+            ${modalQuestionList(company, st.qs)}
+          </div>
+        </div>`;
+    }
+
+    function openStepModal(code) {
+      openStepCode = code; openModuleCode = null;
+      renderStepModal(); showStepModal();
+    }
+
+    function openModuleModal(code) {
+      openModuleCode = code; openStepCode = null;
+      renderModuleModal(); showStepModal();
+    }
+
+    function renderModuleModal() {
+      const company = curCompany();
+      const m = EJM_MODULES.find(x => x.code === openModuleCode);
+      if (!company || !m) return;
+      const ms = MAP_STAGES.find(x => x.id === m.stage);
+      const codes = m.steps.flatMap(c => (STEP_BY_CODE[c] ? STEP_BY_CODE[c].qs : []));
+      const sc = moduleScore(company, m);
+      document.getElementById('stepModalBody').innerHTML = `
+        <div class="px-6 py-4 text-white flex items-start justify-between gap-3" style="background:${ms.color}">
+          <div><div class="text-xs font-semibold opacity-90">${escapeHtml(ms.name)} · ${escapeHtml(m.type || '')}</div>
+            <h3 class="text-xl font-extrabold">${m.code} · ${escapeHtml(m.name)}</h3></div>
+          <div class="flex items-center gap-2">
+            ${sc.answered ? `<span class="px-2.5 py-1 rounded-full bg-white font-extrabold text-sm" style="color:${pcolor(sc.pct)}">${sc.pct}%</span>` : ''}
+            <button onclick="closeStepModal()" class="p-1 rounded-lg hover:bg-white/15" aria-label="Yopish">✕</button>
+          </div>
+        </div>
+        <div class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+          <div>${infoRow('Maqsad', m.goal)}${infoRow('Video darslik mavzulari', m.videos)}${infoRow('Checklist bandlari', m.checklist)}${infoRow('Checklist mas’uli', m.owner)}
+            ${infoRow('Attestatsiya turi', m.attest)}${infoRow('O‘tish mezoni', m.pass)}${infoRow('Davomiyligi', m.duration)}</div>
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Bog‘langan qadamlar</h4>
+            <div class="flex flex-wrap gap-1.5">${m.steps.filter(c => STEP_BY_CODE[c]).map(c => `<button class="px-2 py-1 rounded-lg bg-slate-100 text-xs font-semibold hover:bg-slate-200" onclick="openStepModal('${c}')">${c} ${escapeHtml(STEP_BY_CODE[c].name)}</button>`).join('')}</div>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Diagnostika savollari (${[...new Set(codes)].length}) — ${sc.answered}/${sc.total} javob berilgan</h4>
+            ${modalQuestionList(company, [...new Set(codes)])}
+          </div>
+        </div>`;
+    }
+
+    // Oyna ichida javob berish: audit bilan bir xil mantiq (ball, avto-saqlash, Sheets)
+    function modalAnswer(code, value) {
+      setQuestionAnswer(code, value === 'YO\u2019Q' ? "YO'Q" : value);
+      if (openStepCode) renderStepModal(); else if (openModuleCode) renderModuleModal();
+      refreshPane();
+    }
+
+    function goToQuestion(code) {
+      closeStepModal();
+      const info = QUESTION_BY_CODE[code];
+      setPane('audit');
+      questionFilter = 'ALL';
+      document.getElementById('questionSearchInput').value = '';
+      selectStage(info.stage.id);
+      setTimeout(() => {
+        const el = document.getElementById('q-' + code);
+        if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('ring-2', 'ring-brand-500'); setTimeout(() => el.classList.remove('ring-2', 'ring-brand-500'), 2200); }
+      }, 60);
     }
 
     function escapeHtml(str) {
